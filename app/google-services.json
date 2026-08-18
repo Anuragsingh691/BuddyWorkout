@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "272519922183",
+    "firebase_url": "https://buddyworkout-fb309-default-rtdb.firebaseio.com",
     "project_id": "buddyworkout-fb309",
     "storage_bucket": "buddyworkout-fb309.firebasestorage.app"
   },
@@ -12,7 +13,20 @@
           "package_name": "com.example.buddyworkout"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "272519922183-vut63omu07k0htjh3mrpveqtlf3ujvf8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.buddyworkout",
+            "certificate_hash": "c792ee2b5bdac001b0d79be0bc0f4d267481c1d1"
+          }
+        },
+        {
+          "client_id": "272519922183-hn5igrc7kjksulfq3imskp42gafn06pv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCcP-Zk8bGRRPQpaX1RdLo92a-0LerxF48"
@@ -20,7 +34,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "272519922183-hn5igrc7kjksulfq3imskp42gafn06pv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
