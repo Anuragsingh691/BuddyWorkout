@@ -31,6 +31,11 @@ class RegisterViewModel @Inject constructor(
 
     fun onPasswordChange(value: String) = _state.update { it.copy(password = value) }
 
+    fun onPhoneChange(value: String) = _state.update { it.copy(phone = value) }
+
+    /** Null when the user backed out of the photo picker. */
+    fun onPhotoSelected(uri: String?) = _state.update { it.copy(photoUri = uri) }
+
     fun onCreateAccount() {
         val form = _state.value
         // `canSubmit` already enforces the 6-character minimum, so a short

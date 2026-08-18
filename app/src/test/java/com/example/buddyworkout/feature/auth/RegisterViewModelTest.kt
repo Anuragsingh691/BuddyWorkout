@@ -42,6 +42,17 @@ class RegisterViewModelTest {
         assertTrue(vm.state.value.canSubmit)
     }
 
+    @Test fun `the optional fields are held but never gate submission`() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.fillValidForm()
+        vm.onPhoneChange("+91 98765 43210")
+        vm.onPhotoSelected("content://media/picked/1")
+
+        assertEquals("+91 98765 43210", vm.state.value.phone)
+        assertEquals("content://media/picked/1", vm.state.value.photoUri)
+        assertTrue(vm.state.value.canSubmit)
+    }
+
     @Test fun `a short password blocks submission before the network is touched`() =
         runTest(dispatcher) {
             val vm = viewModel()

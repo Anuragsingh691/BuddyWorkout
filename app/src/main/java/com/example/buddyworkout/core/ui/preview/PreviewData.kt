@@ -86,7 +86,7 @@ object PreviewData {
     val login = LoginUiState(email = "anurag@example.com", password = "secret123")
 
     val register = RegisterUiState(
-        name = "Anurag S.",
+        name = "Anurag Shishodia",
         email = "anurag@example.com",
         password = "secret123",
     )

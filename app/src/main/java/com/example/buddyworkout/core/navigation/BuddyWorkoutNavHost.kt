@@ -100,7 +100,6 @@ fun BuddyWorkoutNavHost(
             composable<Register> {
                 RegisterRoute(
                     onRegistered = { navController.navigate(Home) { popUpTo(0) } },
-                    onSignInClick = { navController.popBackStack() },
                     onBack = { navController.popBackStack() },
                 )
             }
