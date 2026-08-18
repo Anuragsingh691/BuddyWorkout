@@ -43,6 +43,8 @@ fun BwButton(
     modifier: Modifier = Modifier,
     variant: BwButtonVariant = BwButtonVariant.Primary,
     icon: ImageVector? = null,
+    /** Required when [text] is blank, since the icon is then the only label. */
+    contentDescription: String? = null,
     enabled: Boolean = true,
     height: Dp = if (variant == BwButtonVariant.DangerGhost) BwSize.ButtonSmall else BwSize.Button,
     /** The 34dp inline chip the mockups use for "Challenge" and the like. */
@@ -87,20 +89,24 @@ fun BwButton(
         if (icon != null) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = contentDescription,
                 tint = if (icon == BwIcons.Google) Color.Unspecified else content,
                 modifier = Modifier.size(20.dp),
             )
         }
-        Text(
-            text = text,
-            color = content,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = weight,
-                fontSize = if (compact) 13.sp else 16.sp,
-            ),
-            modifier = if (icon != null) Modifier.padding(start = 10.dp) else Modifier,
-        )
+        // Blank text means an icon-only control, such as the camera flip on the
+        // record screen; drawing the empty label would push the icon off centre.
+        if (text.isNotEmpty()) {
+            Text(
+                text = text,
+                color = content,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = weight,
+                    fontSize = if (compact) 13.sp else 16.sp,
+                ),
+                modifier = if (icon != null) Modifier.padding(start = 10.dp) else Modifier,
+            )
+        }
     }
 }
 

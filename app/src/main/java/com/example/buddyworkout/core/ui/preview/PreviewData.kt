@@ -167,16 +167,30 @@ object PreviewData {
     )
 
     val record = RecordUiState(
-        reps = 17,
+        reps = 12,
         formLabel = "Good form",
         elapsedLabel = "04:12",
+        challengeLabel = "PUSHUP CHALLENGE · 1st of 4",
+        totalsLabel = "128 total · +12 this session",
         isRunning = true,
         hasCameraPermission = true,
     )
 
     val winner = WinnerUiState(
-        winnerName = "Rahul K.",
-        detail = "204 reps over 3 days",
-        leaderboard = leaderboard,
+        winnerName = "Anurag wins!",
+        detail = "203 pushups · most reps",
+        leaderboard = listOf(
+            ParticipantUi("u4", "Anurag (you)", me, rank = 1, reps = "203",
+                subtitle = "Finished 17 Jun · 8:40pm", isMe = true),
+            ParticipantUi("u1", "Rohit Kumar", people[0], rank = 2, reps = "181",
+                subtitle = "7 sessions"),
+            ParticipantUi("u2", "Priya Mehta", people[1], rank = 3, reps = "150",
+                subtitle = "5 sessions"),
+            ParticipantUi("u3", "Sahil Verma", people[2], rank = 4, reps = "96",
+                subtitle = "3 sessions"),
+        ),
+        bestSession = "54 pushups",
+        sessionsLogged = "6",
+        avgFormScore = "92%",
     )
 }

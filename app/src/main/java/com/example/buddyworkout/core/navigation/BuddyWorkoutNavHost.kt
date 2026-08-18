@@ -182,6 +182,7 @@ fun BuddyWorkoutNavHost(
                 RecordScreen(
                     state = PreviewData.record,
                     onGrantCameraPermission = {},
+                    onFlipCamera = {},
                     onStopAndSave = { navController.popBackStack() },
                     onBack = { navController.popBackStack() },
                 )
@@ -189,7 +190,8 @@ fun BuddyWorkoutNavHost(
             scrimmed<Winner>(motion) {
                 WinnerScreen(
                     state = PreviewData.winner,
-                    onBackToHome = { navController.navigate(Home) { popUpTo(0) } },
+                    onRematch = { navController.navigate(CreateGraph) },
+                    onBack = { navController.navigate(Home) { popUpTo(0) } },
                 )
             }
 

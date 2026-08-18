@@ -3,12 +3,15 @@ package com.example.buddyworkout.feature.record
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.example.buddyworkout.core.ui.component.BwButton
 import com.example.buddyworkout.core.ui.component.BwButtonVariant
 import com.example.buddyworkout.core.ui.component.BwTopBar
@@ -20,6 +23,9 @@ import com.example.buddyworkout.core.ui.theme.BuddyWorkoutTheme
 import com.example.buddyworkout.core.ui.theme.BwColors
 import com.example.buddyworkout.core.ui.theme.BwSpace
 
+/** Height of the export's recording controls — taller than a standard button. */
+private val ControlHeight = 54.dp
+
 /**
  * Renders the overlay only — no CameraX, no ML Kit. The `cameraPreview` slot
  * stays empty, showing the dark camera surface. The pose pipeline is a later
@@ -29,6 +35,7 @@ import com.example.buddyworkout.core.ui.theme.BwSpace
 fun RecordScreen(
     state: RecordUiState,
     onGrantCameraPermission: () -> Unit,
+    onFlipCamera: () -> Unit,
     onStopAndSave: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -38,18 +45,18 @@ fun RecordScreen(
             .fillMaxSize()
             .background(BwColors.Bg),
     ) {
-        BwTopBar(title = "Record workout", overline = "PUSHUPS", onBack = onBack)
+        BwTopBar(title = "Record · ${state.exercise}", onBack = onBack)
 
         CameraOverlay(
             reps = state.reps,
             formLabel = state.guidance ?: state.formLabel,
-            footerLabel = "Elapsed",
-            footerValue = state.elapsedLabel,
+            footerLabel = state.challengeLabel,
+            footerValue = state.totalsLabel,
             showPoseSkeleton = state.isRunning,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = BwSpace.Gutter, vertical = BwSpace.Md),
+                .padding(horizontal = BwSpace.Gutter),
         )
 
         Column(
@@ -60,7 +67,8 @@ fun RecordScreen(
         ) {
             if (!state.hasCameraPermission) {
                 NoticeCard(
-                    text = "Camera access is needed to count your reps. Frames never leave your phone — only the count is saved.",
+                    text = "Camera access is needed to count your reps. " +
+                        "Frames never leave your phone — only the count is saved.",
                     icon = BwIcons.Video,
                 )
                 BwButton(
@@ -69,13 +77,24 @@ fun RecordScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
-                BwButton(
-                    text = "Stop & save",
-                    onClick = onStopAndSave,
-                    icon = BwIcons.Stop,
-                    variant = BwButtonVariant.DangerGhost,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(BwSpace.Md)) {
+                    BwButton(
+                        text = "",
+                        onClick = onFlipCamera,
+                        variant = BwButtonVariant.Outline,
+                        icon = BwIcons.Video,
+                        contentDescription = "Flip camera",
+                        height = ControlHeight,
+                        modifier = Modifier.width(60.dp),
+                    )
+                    BwButton(
+                        text = "Stop & save",
+                        onClick = onStopAndSave,
+                        icon = BwIcons.Stop,
+                        height = ControlHeight,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }
@@ -84,7 +103,7 @@ fun RecordScreen(
 @Preview(showBackground = true, widthDp = 380, heightDp = 800)
 @Composable
 private fun RecordRunningPreview() = BuddyWorkoutTheme {
-    RecordScreen(PreviewData.record, {}, {}, {})
+    RecordScreen(PreviewData.record, {}, {}, {}, {})
 }
 
 @Preview(showBackground = true, widthDp = 380, heightDp = 800)
@@ -92,6 +111,6 @@ private fun RecordRunningPreview() = BuddyWorkoutTheme {
 private fun RecordNeedsPermissionPreview() = BuddyWorkoutTheme {
     RecordScreen(
         PreviewData.record.copy(hasCameraPermission = false, isRunning = false, reps = 0),
-        {}, {}, {},
+        {}, {}, {}, {},
     )
 }
