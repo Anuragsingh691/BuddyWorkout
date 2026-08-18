@@ -2,6 +2,7 @@ package com.example.buddyworkout.data.user
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 
 /** Records what each command was called with and replays a canned outcome. */
 class FakeUserRepository : UserRepository {
@@ -18,6 +19,9 @@ class FakeUserRepository : UserRepository {
 
     val profile = MutableStateFlow<UserProfile?>(null)
 
+    /** Set to make [observeProfile] fail the way a rejected listen does. */
+    var observeError: Throwable? = null
+
     override suspend fun ensureProfile(name: String?, phone: String?): Result<Unit> {
         ensureCalls++
         lastName = name
@@ -31,5 +35,6 @@ class FakeUserRepository : UserRepository {
         return uploadResult
     }
 
-    override fun observeProfile(): Flow<UserProfile?> = profile
+    override fun observeProfile(): Flow<UserProfile?> =
+        observeError?.let { flow<UserProfile?> { throw it } } ?: profile
 }

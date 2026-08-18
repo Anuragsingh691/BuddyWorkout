@@ -13,6 +13,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -107,5 +109,20 @@ class ProfileViewModelTest {
 
         assertEquals("None", vm.state.value.stats.first { it.label == "Profile photo" }.value)
         assertEquals("Not set", vm.state.value.stats.first { it.label == "Phone" }.value)
+    }
+
+    @Test fun `a rejected profile listen is reported, not fatal`() = runTest(dispatcher) {
+        // Firestore rejects the listen on a rules failure, and signing out
+        // rejects it too. Neither may take the app down with it.
+        repo.currentUser = AuthUser("u1", "Anurag S.", "anurag@example.com", null)
+        users.observeError = IllegalStateException("PERMISSION_DENIED")
+
+        val vm = ProfileViewModel(repo, users)
+        testScheduler.advanceUntilIdle()
+
+        assertNotNull(vm.state.value.error)
+        // The Auth-seeded identity survives, so the screen still renders.
+        assertEquals("Anurag S.", vm.state.value.name)
+        assertFalse(vm.state.value.isLoading)
     }
 }

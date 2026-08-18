@@ -49,6 +49,13 @@ interface UserRepository {
      */
     suspend fun uploadPhoto(uri: String): Result<String>
 
-    /** The signed-in user's profile, or null while signed out. */
+    /**
+     * The signed-in user's profile, or null while signed out.
+     *
+     * **Fails the flow** when Firestore rejects the listen — a rules failure,
+     * or a sign-out that re-evaluates the listen with no auth. Collect it with
+     * `.catch`: an unhandled failure here reaches the coroutine that collects
+     * and takes the process with it.
+     */
     fun observeProfile(): Flow<UserProfile?>
 }

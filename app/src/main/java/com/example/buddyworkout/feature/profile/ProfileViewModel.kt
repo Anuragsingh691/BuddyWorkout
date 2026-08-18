@@ -1,5 +1,6 @@
 package com.example.buddyworkout.feature.profile
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.buddyworkout.core.ui.component.AvatarUi
@@ -13,10 +14,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "ProfileViewModel"
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
@@ -37,9 +41,18 @@ class ProfileViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            userRepository.observeProfile().collect { profile ->
-                if (profile != null) _state.update { it.merge(profile) }
-            }
+            userRepository.observeProfile()
+                // A rejected listen must not take the app down. Firestore
+                // delivers one whenever rules refuse the read — including on
+                // sign-out, when the listen is re-evaluated with no auth. The
+                // screen keeps the identity Auth already gave it and says so.
+                .catch { cause ->
+                    Log.w(TAG, "Profile listen failed", cause)
+                    _state.update { it.copy(error = "Couldn't load your profile.") }
+                }
+                .collect { profile ->
+                    if (profile != null) _state.update { it.merge(profile) }
+                }
         }
     }
 
