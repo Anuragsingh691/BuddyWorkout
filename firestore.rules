@@ -39,20 +39,43 @@ service cloud.firestore {
     }
 
     match /challenges/{challengeId} {
-      // Membership is the read gate, and it is checked against the document
-      // being read rather than with a get() — a lookup per document would
-      // bill a read for every row of every list.
-      allow read: if isSignedIn() && request.auth.uid in resource.data.memberUids;
+      // `get` and `list` are separated on purpose. Knowing an unguessable id
+      // is what an invite link gives you, so a single document is readable by
+      // any signed-in user — but queries only ever return your own challenges,
+      // so nobody can enumerate ones they are not in.
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && request.auth.uid in resource.data.memberUids;
 
-      // Writes arrive with the challenge write path. Creating and joining go
-      // through Cloud Functions, which bypass rules; leaving this closed means
-      // a tampered client cannot invent a challenge in the meantime.
-      allow write: if false;
+      // A challenge is created containing only its creator; members arrive by
+      // opening the link. The 2-active limit is NOT enforced here — that was
+      // the job of the Cloud Function this build does without, so it is
+      // client-trusted (`02-firebase-design.md` §5, Spark fallback).
+      allow create: if isSignedIn()
+                    && request.resource.data.creatorUid == request.auth.uid
+                    && request.resource.data.memberUids == [request.auth.uid]
+                    && request.resource.data.status == 'active'
+                    && !('winnerUid' in request.resource.data);
+
+      // Only the creator ends a challenge, and only by cancelling it. Reaching
+      // 'completed' is the deadline's job, never a client's, so that no member
+      // can declare an early win.
+      allow update: if isSignedIn()
+                    && request.auth.uid == resource.data.creatorUid
+                    && request.resource.data.status == 'cancelled'
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['status']);
+
+      allow delete: if false;
 
       match /participants/{uid} {
-        // A leaderboard row is readable by anyone who can read its challenge.
         allow read: if isSignedIn();
-        allow write: if false;
+        // You may only create your own row, and only with a zero count — reps
+        // are earned, not declared.
+        allow create: if isSignedIn()
+                      && request.auth.uid == uid
+                      && request.resource.data.totalReps == 0;
+        allow update: if false;
+        allow delete: if false;
       }
 
       match /sessions/{sessionId} {

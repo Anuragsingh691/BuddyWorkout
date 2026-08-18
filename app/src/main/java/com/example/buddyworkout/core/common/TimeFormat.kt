@@ -67,3 +67,32 @@ fun formatCountdown(millisRemaining: Long): String {
 }
 
 private fun plural(count: Long, noun: String) = if (count == 1L) noun else "${noun}s"
+
+/**
+ * A challenge window edge: `"17 Jun · 6:00 PM"`.
+ *
+ * `java.util.Calendar` rather than `java.time`, which needs core-library
+ * desugaring at minSdk 24 — the same reason [CalendarMonth] does its own
+ * arithmetic. [timeZone] is a parameter so the formatting is testable without
+ * depending on wherever the test happens to run.
+ */
+fun formatWindowLabel(
+    millis: Long,
+    timeZone: java.util.TimeZone = java.util.TimeZone.getDefault(),
+): String {
+    val calendar = java.util.Calendar.getInstance(timeZone).apply { timeInMillis = millis }
+
+    val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+    val month = SHORT_MONTHS[calendar.get(java.util.Calendar.MONTH)]
+    // HOUR (not HOUR_OF_DAY) is 0-11, and both midnight and midday read as 12.
+    val hour = calendar.get(java.util.Calendar.HOUR).let { if (it == 0) 12 else it }
+    val minute = calendar.get(java.util.Calendar.MINUTE)
+    val meridiem = if (calendar.get(java.util.Calendar.AM_PM) == java.util.Calendar.AM) "AM" else "PM"
+
+    return "$day $month · $hour:%02d $meridiem".format(minute)
+}
+
+private val SHORT_MONTHS = listOf(
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+)

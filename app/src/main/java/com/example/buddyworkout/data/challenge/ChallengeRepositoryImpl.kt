@@ -1,11 +1,16 @@
 package com.example.buddyworkout.data.challenge
 
+import com.example.buddyworkout.core.common.BusyTracker
+import com.example.buddyworkout.core.common.trackCatching
+import com.example.buddyworkout.feature.challenge.create.ChallengeWindow
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.QuerySnapshot
+import java.util.Date
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -14,6 +19,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,6 +37,7 @@ private const val HISTORY_LIMIT = 30L
 class ChallengeRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
+    private val busy: BusyTracker,
 ) : ChallengeRepository {
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -67,6 +74,62 @@ class ChallengeRepositoryImpl @Inject constructor(
                     else ChallengeWithParticipants(document.toChallenge(), participants)
                 }
             }
+
+    override suspend fun createChallenge(window: ChallengeWindow): Result<String> =
+        busy.trackCatching {
+            val user = auth.currentUser ?: error("createChallenge called while signed out")
+
+            // Counted from the live list rather than a stored counter: closing
+            // a challenge would have to decrement every member's counter, and
+            // rules do not let one user write another's document. Restore the
+            // counter if Cloud Functions ever land.
+            val active = firestore.collection(CHALLENGES)
+                .whereArrayContains("memberUids", user.uid)
+                .get().await()
+                .documents.map { it.toChallenge() }
+                .count { !it.status.isOver && it.endAtMillis > System.currentTimeMillis() }
+            if (active >= MAX_ACTIVE_CHALLENGES) throw ChallengeLimitReached()
+
+            val challenge = firestore.collection(CHALLENGES).document()
+            val participant = challenge.collection(PARTICIPANTS).document(user.uid)
+
+            // Batch, not a transaction: nothing here is read-then-write, and a
+            // batch is one round trip rather than two.
+            firestore.batch().apply {
+                set(
+                    challenge,
+                    mapOf(
+                        "title" to "Pushup challenge",
+                        "exercise" to "pushups",
+                        "creatorUid" to user.uid,
+                        "memberUids" to listOf(user.uid),
+                        "memberCount" to 1,
+                        "startAt" to Timestamp(Date(window.startMillis)),
+                        "endAt" to Timestamp(Date(window.endMillis)),
+                        "status" to "active",
+                        "createdAt" to FieldValue.serverTimestamp(),
+                    ),
+                )
+                set(
+                    participant,
+                    mapOf(
+                        "displayName" to user.displayName.orEmpty(),
+                        "photoUrl" to user.photoUrl?.toString(),
+                        "totalReps" to 0,
+                        "joinedAt" to FieldValue.serverTimestamp(),
+                    ),
+                )
+            }.commit().await()
+
+            challenge.id
+        }
+
+    override suspend fun cancelChallenge(challengeId: String): Result<Unit> =
+        busy.trackCatching {
+            firestore.collection(CHALLENGES).document(challengeId)
+                .update("status", "cancelled")
+                .await()
+        }
 
     private fun withParticipants(challenge: Challenge): Flow<ChallengeWithParticipants> =
         participantsOf(challenge.id).map { ChallengeWithParticipants(challenge, it) }

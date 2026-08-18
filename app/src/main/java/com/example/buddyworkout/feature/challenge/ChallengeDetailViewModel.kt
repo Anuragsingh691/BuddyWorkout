@@ -10,6 +10,7 @@ import com.example.buddyworkout.data.auth.AuthRepository
 import com.example.buddyworkout.data.challenge.ChallengeRepository
 import com.example.buddyworkout.data.challenge.ChallengeWithParticipants
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import androidx.navigation.toRoute
@@ -32,7 +34,7 @@ private const val TICK_MILLIS = 1_000L
 class ChallengeDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     authRepository: AuthRepository,
-    challengeRepository: ChallengeRepository,
+    private val challengeRepository: ChallengeRepository,
 ) : ViewModel() {
 
     private val uid = authRepository.currentUser?.uid.orEmpty()
@@ -40,6 +42,9 @@ class ChallengeDetailViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(ChallengeDetailUiState(isLoading = true))
     val state: StateFlow<ChallengeDetailUiState> = _state.asStateFlow()
+
+    private val _cancelled = Channel<Unit>(Channel.BUFFERED)
+    val cancelled: Flow<Unit> = _cancelled.receiveAsFlow()
 
     init {
         viewModelScope.launch {
@@ -76,6 +81,28 @@ class ChallengeDetailViewModel @Inject constructor(
             isCreator = entry.challenge.creatorUid == uid,
             isCompleted = over,
         )
+    }
+
+    fun onCancelChallenge() {
+        if (_state.value.isLoading) return
+        _state.update { it.copy(isLoading = true, error = null) }
+        viewModelScope.launch {
+            challengeRepository.cancelChallenge(challengeId).fold(
+                onSuccess = {
+                    // No navigation and no local status edit: the listener is
+                    // still open, so the cancelled document arrives on its own
+                    // and re-renders the screen as ended.
+                    _state.update { it.copy(isLoading = false) }
+                    _cancelled.send(Unit)
+                },
+                onFailure = {
+                    Log.w(TAG, "Cancel failed", it)
+                    _state.update {
+                        it.copy(isLoading = false, error = "Couldn't cancel the challenge.")
+                    }
+                },
+            )
+        }
     }
 }
 

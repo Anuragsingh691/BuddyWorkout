@@ -32,6 +32,11 @@ data class CreateChallengeUiState(
     /** e.g. `"· 2 of 3 added"`, shown beside the Buddies label. */
     val buddiesHint: String get() = "· ${selectedBuddies.size} of $MAX_BUDDIES added"
 
+    /**
+     * Buddies are deliberately not required: a challenge starts with just its
+     * creator and fills up from the share link. Requiring them here would make
+     * the screen unusable until the buddy list exists.
+     */
     val canCreate: Boolean
-        get() = selectedBuddies.isNotEmpty() && endLabel.isNotBlank() && !isLoading
+        get() = selectedDurationIndex >= 0 && !isLoading
 }

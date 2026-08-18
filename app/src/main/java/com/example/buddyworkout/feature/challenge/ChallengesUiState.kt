@@ -1,9 +1,7 @@
 package com.example.buddyworkout.feature.challenge
 
 import com.example.buddyworkout.core.ui.model.ChallengeUi
-
-/** How many challenges a person may be in at once. */
-const val MAX_ACTIVE_CHALLENGES = 2
+import com.example.buddyworkout.data.challenge.MAX_ACTIVE_CHALLENGES
 
 data class ChallengesUiState(
     val isLoading: Boolean = false,

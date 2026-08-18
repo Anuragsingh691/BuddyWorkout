@@ -30,7 +30,10 @@ import com.example.buddyworkout.feature.auth.RegisterRoute
 import com.example.buddyworkout.feature.challenge.ChallengeDetailRoute
 import com.example.buddyworkout.feature.challenge.ChallengesRoute
 import com.example.buddyworkout.feature.challenge.create.BuddyPickerScreen
-import com.example.buddyworkout.feature.challenge.create.CreateChallengeScreen
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavBackStackEntry
+import com.example.buddyworkout.feature.challenge.create.CreateChallengeRoute
+import com.example.buddyworkout.feature.challenge.create.CreateChallengeViewModel
 import com.example.buddyworkout.feature.challenge.create.MAX_BUDDIES
 import com.example.buddyworkout.feature.challenge.create.DateTimeMode
 import com.example.buddyworkout.feature.challenge.create.DateTimePickerScreen
@@ -149,7 +152,7 @@ fun BuddyWorkoutNavHost(
                     onBack = { navController.popBackStack() },
                     onRecordWorkout = { navController.navigate(Record(route.id)) },
                     onSeeWinner = { navController.navigate(Winner(route.id)) },
-                    onCancelChallenge = { navController.popBackStack() },
+                    onCancelled = { navController.popBackStack() },
                 )
             }
             scrimmed<ChallengeInvite>(
@@ -186,22 +189,17 @@ fun BuddyWorkoutNavHost(
             // Scoped as its own graph so the three screens can later share one
             // CreateChallengeViewModel instead of passing results back.
             navigation<CreateGraph>(startDestination = Create) {
-                scrimmed<Create>(motion) {
-                    // Temporary UI-local duration until the shared
-                    // CreateChallengeViewModel owns it.
-                    var duration by rememberSaveable { mutableIntStateOf(1) }
-                    CreateChallengeScreen(
-                        state = PreviewData.createChallenge.copy(selectedDurationIndex = duration),
-                        onBack = { navController.popBackStack() },
-                        onPickBuddies = { navController.navigate(BuddyPicker) },
-                        onSelectDuration = { duration = it },
-                        onPickStart = { navController.navigate(DateTimePicker) },
-                        onPickEnd = { navController.navigate(DateTimePicker) },
-                        onCreate = {
-                            navController.navigate(ChallengeDetail("new")) {
+                scrimmed<Create>(motion) { entry ->
+                    CreateChallengeRoute(
+                        viewModel = createViewModel(navController, entry),
+                        onCreated = { id ->
+                            navController.navigate(ChallengeDetail(id)) {
                                 popUpTo(CreateGraph) { inclusive = true }
                             }
                         },
+                        onPickBuddies = { navController.navigate(BuddyPicker) },
+                        onPickWindow = { navController.navigate(DateTimePicker) },
+                        onBack = { navController.popBackStack() },
                     )
                 }
                 scrimmed<BuddyPicker>(motion) {
@@ -273,4 +271,18 @@ fun BuddyWorkoutNavHost(
             scrimmed<Gallery>(motion) { ComponentGallery() }
         }
     }
+}
+
+/**
+ * The create flow's shared ViewModel, scoped to the graph rather than to a
+ * screen, so the three screens of the flow see the same state — which is why
+ * `CreateGraph` is a nested graph at all (spec §2.5).
+ */
+@Composable
+private fun createViewModel(
+    navController: NavHostController,
+    entry: NavBackStackEntry,
+): CreateChallengeViewModel {
+    val graphEntry = remember(entry) { navController.getBackStackEntry(CreateGraph) }
+    return hiltViewModel(graphEntry)
 }
