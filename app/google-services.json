@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "272519922183",
+    "project_id": "buddyworkout-fb309",
+    "storage_bucket": "buddyworkout-fb309.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:272519922183:android:3588ca267873e876b620a2",
+        "android_client_info": {
+          "package_name": "com.example.buddyworkout"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcP-Zk8bGRRPQpaX1RdLo92a-0LerxF48"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
