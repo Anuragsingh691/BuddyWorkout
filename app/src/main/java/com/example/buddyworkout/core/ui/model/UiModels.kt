@@ -64,4 +64,6 @@ data class BuddyUi(
     /** e.g. `"In 1 active challenge"`. */
     val subtitle: String? = null,
     val selected: Boolean = false,
+    /** Drives the Active pill vs the Challenge button on the invite screen. */
+    val inChallenge: Boolean = false,
 )

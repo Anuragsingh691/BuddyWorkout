@@ -142,6 +142,7 @@ fun BuddyWorkoutNavHost(
                     state = PreviewData.invite,
                     onCopyLink = {},
                     onShareLink = {},
+                    onChallengeBuddy = { navController.navigate(CreateGraph) },
                     onBack = { navController.popBackStack() },
                 )
             }

@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.buddyworkout.core.ui.icon.BwIcons
 import com.example.buddyworkout.core.ui.theme.BuddyWorkoutTheme
 import com.example.buddyworkout.core.ui.theme.BwColors
@@ -44,6 +45,8 @@ fun BwButton(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     height: Dp = if (variant == BwButtonVariant.DangerGhost) BwSize.ButtonSmall else BwSize.Button,
+    /** The 34dp inline chip the mockups use for "Challenge" and the like. */
+    compact: Boolean = false,
 ) {
     val background = when {
         !enabled -> if (variant == BwButtonVariant.Primary) BwColors.Line else Color.Transparent
@@ -77,7 +80,7 @@ fun BwButton(
             )
             .background(background, shape)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = if (compact) 14.dp else 16.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -92,7 +95,10 @@ fun BwButton(
         Text(
             text = text,
             color = content,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = weight),
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = weight,
+                fontSize = if (compact) 13.sp else 16.sp,
+            ),
             modifier = if (icon != null) Modifier.padding(start = 10.dp) else Modifier,
         )
     }

@@ -139,8 +139,17 @@ object PreviewData {
     )
 
     val invite = InviteUiState(
-        link = "https://commworkout.app/i/9F3KQ2",
-        code = "9F3KQ2",
+        link = "commworkout.app/i/anurag",
+        buddies = listOf(
+            BuddyUi("b1", "Rohit Kumar", AvatarUi("RK", color = avatarColorFor("RK")),
+                subtitle = "In 1 challenge", inChallenge = true),
+            BuddyUi("b2", "Priya Mehta", AvatarUi("PM", color = avatarColorFor("PM")),
+                subtitle = "In 1 challenge", inChallenge = true),
+            BuddyUi("b3", "Sahil Verma", AvatarUi("SV", color = avatarColorFor("SV")),
+                subtitle = "No challenge yet"),
+            BuddyUi("b4", "Neha Arora", AvatarUi("NA", color = avatarColorFor("NA")),
+                subtitle = "No challenge yet"),
+        ),
     )
 
     val challengeInvite = ChallengeInviteUiState(
