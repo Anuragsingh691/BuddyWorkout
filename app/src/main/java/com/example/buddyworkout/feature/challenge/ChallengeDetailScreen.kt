@@ -57,7 +57,18 @@ fun ChallengeDetailScreen(
             contentPadding = PaddingValues(BwSpace.Gutter),
             verticalArrangement = Arrangement.spacedBy(BwSpace.Md),
         ) {
-            item { CountdownCard(remaining = state.remaining, members = state.members) }
+            item {
+                CountdownCard(
+                    remaining = state.remaining,
+                    members = state.members,
+                    // The deadline note only makes sense while the clock runs.
+                    note = if (state.isCompleted) {
+                        null
+                    } else {
+                        "Auto-declares the winner at the deadline. No early finish."
+                    },
+                )
+            }
 
             item {
                 BwCard(modifier = Modifier.fillMaxWidth()) {
@@ -67,7 +78,12 @@ fun ChallengeDetailScreen(
                 }
             }
 
-            item { SectionTitle(text = "Leaderboard", hint = "Live") }
+            item {
+                SectionTitle(
+                    text = "Leaderboard",
+                    hint = if (state.isCompleted) "Final" else "Live",
+                )
+            }
 
             item {
                 BwCard(modifier = Modifier.fillMaxWidth()) {
