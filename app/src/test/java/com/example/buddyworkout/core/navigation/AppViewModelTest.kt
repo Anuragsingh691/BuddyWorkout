@@ -1,5 +1,6 @@
 package com.example.buddyworkout.core.navigation
 
+import com.example.buddyworkout.core.common.BusyTracker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,12 +48,12 @@ class AppViewModelTest {
     }
 
     @Test fun `starts in Loading before anything is collected`() = runTest(dispatcher) {
-        val vm = AppViewModel(FakeSessionSource(AuthState.SignedIn))
+        val vm = AppViewModel(FakeSessionSource(AuthState.SignedIn), BusyTracker())
         assertEquals(AuthState.Loading, vm.state.value)
     }
 
     @Test fun `adopts the signed-in state once collected`() = runTest(dispatcher) {
-        val vm = AppViewModel(FakeSessionSource(AuthState.SignedIn))
+        val vm = AppViewModel(FakeSessionSource(AuthState.SignedIn), BusyTracker())
         collecting(vm)
         testScheduler.advanceUntilIdle()
         assertEquals(AuthState.SignedIn, vm.state.value)
@@ -60,7 +61,7 @@ class AppViewModelTest {
 
     @Test fun `follows the source when the session ends`() = runTest(dispatcher) {
         val source = FakeSessionSource(AuthState.SignedIn)
-        val vm = AppViewModel(source)
+        val vm = AppViewModel(source, BusyTracker())
         collecting(vm)
         testScheduler.advanceUntilIdle()
 

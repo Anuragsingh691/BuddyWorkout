@@ -19,6 +19,7 @@ import com.example.buddyworkout.core.navigation.AuthState
 import com.example.buddyworkout.core.navigation.BuddyWorkoutNavHost
 import com.example.buddyworkout.core.navigation.Home
 import com.example.buddyworkout.core.navigation.Login
+import com.example.buddyworkout.core.ui.component.BwLoadingOverlay
 import com.example.buddyworkout.core.ui.theme.BuddyWorkoutTheme
 import com.example.buddyworkout.core.ui.theme.BwColors
 import dagger.hilt.android.AndroidEntryPoint
@@ -74,7 +75,15 @@ private fun BuddyWorkoutRoot(newIntents: Flow<Intent>) {
 
         else -> {
             val startDestination = remember { if (authState == AuthState.SignedIn) Home else Login }
-            BuddyWorkoutNavHost(startDestination = startDestination, newIntents = newIntents)
+            val isBusy by appViewModel.isBusy.collectAsStateWithLifecycle()
+
+            // Above the NavHost so it covers the bottom bar too, and so a
+            // command that navigates on success keeps the loader up across the
+            // transition rather than flashing it off mid-flight.
+            Box(Modifier.fillMaxSize()) {
+                BuddyWorkoutNavHost(startDestination = startDestination, newIntents = newIntents)
+                if (isBusy) BwLoadingOverlay()
+            }
         }
     }
 }

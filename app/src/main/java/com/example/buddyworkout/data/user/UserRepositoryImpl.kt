@@ -3,6 +3,8 @@ package com.example.buddyworkout.data.user
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import com.example.buddyworkout.core.common.BusyTracker
+import com.example.buddyworkout.core.common.trackCatching
 import com.example.buddyworkout.core.common.decodeSampledBitmap
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
@@ -44,13 +46,15 @@ class UserRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
+    private val busy: BusyTracker,
 ) : UserRepository {
 
-    override suspend fun ensureProfile(name: String?, phone: String?): Result<Unit> = runCatching {
+    override suspend fun ensureProfile(name: String?, phone: String?): Result<Unit> =
+        busy.trackCatching {
         val user = auth.currentUser ?: error("ensureProfile called while signed out")
         val document = firestore.collection(USERS).document(user.uid)
 
-        if (document.get().await().exists()) return@runCatching
+        if (document.get().await().exists()) return@trackCatching
 
         document.set(
             mapOf(
@@ -69,7 +73,7 @@ class UserRepositoryImpl @Inject constructor(
         ).await()
     }
 
-    override suspend fun saveAvatar(uri: String): Result<Unit> = runCatching {
+    override suspend fun saveAvatar(uri: String): Result<Unit> = busy.trackCatching {
         val uid = auth.currentUser?.uid ?: error("saveAvatar called while signed out")
         val bytes = withContext(Dispatchers.IO) { compress(Uri.parse(uri)) }
 

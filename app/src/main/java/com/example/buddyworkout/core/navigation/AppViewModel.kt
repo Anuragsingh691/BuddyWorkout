@@ -1,5 +1,6 @@
 package com.example.buddyworkout.core.navigation
 
+import com.example.buddyworkout.core.common.BusyTracker
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +16,11 @@ import javax.inject.Inject
 @HiltViewModel
 class AppViewModel @Inject constructor(
     sessionSource: SessionSource,
+    busyTracker: BusyTracker,
 ) : ViewModel() {
+
+    /** True while any command is in flight; drives the app-wide loader. */
+    val isBusy: StateFlow<Boolean> = busyTracker.isBusy
 
     val state: StateFlow<AuthState> = sessionSource.authState.stateIn(
         scope = viewModelScope,

@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.ui.graphics.asImageBitmap
+import com.example.buddyworkout.core.common.BusyTracker
 import com.example.buddyworkout.core.common.decodeAvatar
 import com.example.buddyworkout.core.ui.component.AvatarUi
 import com.example.buddyworkout.data.auth.AuthRepository
@@ -28,6 +29,7 @@ private const val TAG = "ProfileViewModel"
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     userRepository: UserRepository,
+    private val busy: BusyTracker,
 ) : ViewModel() {
 
     /**
@@ -75,8 +77,14 @@ class ProfileViewModel @Inject constructor(
         if (_state.value.isLoading) return
         _state.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            authRepository.signOut()
-            clearCredentialState()
+            // Wrapped as a whole, not just the repository call: clearing the
+            // credential state is a Credential Manager round trip at the call
+            // site, and it is the slow half. The tracker counts, so the
+            // repository's own tracking nesting inside this is harmless.
+            busy.track {
+                authRepository.signOut()
+                clearCredentialState()
+            }
             _state.update { it.copy(isLoading = false) }
             _signedOut.send(Unit)
         }
