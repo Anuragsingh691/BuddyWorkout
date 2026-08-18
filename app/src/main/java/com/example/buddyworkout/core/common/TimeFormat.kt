@@ -28,3 +28,42 @@ fun formatRemaining(millisRemaining: Long): String {
         else -> "< 1m left"
     }
 }
+
+/**
+ * Coarse remaining time for a challenge card: `"ends in 3 days"`,
+ * `"ends in 5 hours"`, `"ended"`.
+ *
+ * Separate from [formatRemaining] because the mockups print the same fact two
+ * ways — a sentence on the card, a clock on the detail screen. Always rounds
+ * down: promising more time than remains is the worse error.
+ */
+fun formatEndsIn(millisRemaining: Long): String {
+    if (millisRemaining <= 0) return "ended"
+
+    val days = millisRemaining / DAY
+    val hours = millisRemaining / HOUR
+    val minutes = millisRemaining / MINUTE
+
+    return when {
+        days > 0 -> "ends in $days ${plural(days, "day")}"
+        hours > 0 -> "ends in $hours ${plural(hours, "hour")}"
+        minutes > 0 -> "ends in $minutes ${plural(minutes, "minute")}"
+        else -> "ends in under a minute"
+    }
+}
+
+/**
+ * The challenge detail clock: `"02:14:53"`.
+ *
+ * Days roll into the hour field rather than adding a segment, so the layout
+ * never reflows as a long challenge counts down.
+ */
+fun formatCountdown(millisRemaining: Long): String {
+    val safe = millisRemaining.coerceAtLeast(0)
+    val hours = safe / HOUR
+    val minutes = (safe % HOUR) / MINUTE
+    val seconds = (safe % MINUTE) / SECOND
+    return "%02d:%02d:%02d".format(hours, minutes, seconds)
+}
+
+private fun plural(count: Long, noun: String) = if (count == 1L) noun else "${noun}s"

@@ -2,6 +2,8 @@ package com.example.buddyworkout.core.di
 
 import com.example.buddyworkout.data.auth.AuthRepository
 import com.example.buddyworkout.data.auth.AuthRepositoryImpl
+import com.example.buddyworkout.data.challenge.ChallengeRepository
+import com.example.buddyworkout.data.challenge.ChallengeRepositoryImpl
 import com.example.buddyworkout.data.user.UserRepository
 import com.example.buddyworkout.data.user.UserRepositoryImpl
 import dagger.Binds
@@ -22,4 +24,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun userRepository(impl: UserRepositoryImpl): UserRepository
+
+    @Binds
+    @Singleton
+    abstract fun challengeRepository(impl: ChallengeRepositoryImpl): ChallengeRepository
 }

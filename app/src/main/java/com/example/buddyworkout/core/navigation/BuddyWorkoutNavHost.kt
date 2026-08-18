@@ -27,14 +27,14 @@ import com.example.buddyworkout.core.ui.preview.PreviewData
 import com.example.buddyworkout.core.ui.theme.BwColors
 import com.example.buddyworkout.feature.auth.LoginRoute
 import com.example.buddyworkout.feature.auth.RegisterRoute
-import com.example.buddyworkout.feature.challenge.ChallengeDetailScreen
-import com.example.buddyworkout.feature.challenge.ChallengesScreen
+import com.example.buddyworkout.feature.challenge.ChallengeDetailRoute
+import com.example.buddyworkout.feature.challenge.ChallengesRoute
 import com.example.buddyworkout.feature.challenge.create.BuddyPickerScreen
 import com.example.buddyworkout.feature.challenge.create.CreateChallengeScreen
 import com.example.buddyworkout.feature.challenge.create.MAX_BUDDIES
 import com.example.buddyworkout.feature.challenge.create.DateTimeMode
 import com.example.buddyworkout.feature.challenge.create.DateTimePickerScreen
-import com.example.buddyworkout.feature.home.HomeScreen
+import com.example.buddyworkout.feature.home.HomeRoute
 import com.example.buddyworkout.feature.invite.ChallengeInviteScreen
 import com.example.buddyworkout.feature.invite.InviteScreen
 import com.example.buddyworkout.feature.profile.ProfileRoute
@@ -113,8 +113,7 @@ fun BuddyWorkoutNavHost(
 
             // --- Bottom-nav roots ---------------------------------------
             scrimmed<Home>(motion) {
-                HomeScreen(
-                    state = PreviewData.home,
+                HomeRoute(
                     onCreateChallenge = { navController.navigate(CreateGraph) },
                     onInviteBuddies = { navController.navigate(Invite) },
                     onChallengeClick = { id -> navController.navigate(ChallengeDetail(id)) },
@@ -122,12 +121,7 @@ fun BuddyWorkoutNavHost(
                 )
             }
             scrimmed<Challenges>(motion) {
-                // Temporary UI-local state so the tabs actually switch before a
-                // ViewModel exists. The ViewModel will own this.
-                var tab by rememberSaveable { mutableIntStateOf(0) }
-                ChallengesScreen(
-                    state = PreviewData.challengesTab.copy(selectedTab = tab),
-                    onTabSelect = { tab = it },
+                ChallengesRoute(
                     onChallengeClick = { id -> navController.navigate(ChallengeDetail(id)) },
                     onCreateChallenge = { navController.navigate(CreateGraph) },
                 )
@@ -151,14 +145,7 @@ fun BuddyWorkoutNavHost(
             }
             scrimmed<ChallengeDetail>(motion) { entry ->
                 val route = entry.toRoute<ChallengeDetail>()
-                // The completed fake ("c0", reachable from the Completed tab)
-                // renders the ended variant, which is the only route to Winner.
-                val isCompleted = route.id == "c0"
-                ChallengeDetailScreen(
-                    state = PreviewData.challengeDetail.copy(
-                        isCompleted = isCompleted,
-                        remaining = if (isCompleted) "Ended" else PreviewData.challengeDetail.remaining,
-                    ),
+                ChallengeDetailRoute(
                     onBack = { navController.popBackStack() },
                     onRecordWorkout = { navController.navigate(Record(route.id)) },
                     onSeeWinner = { navController.navigate(Winner(route.id)) },
