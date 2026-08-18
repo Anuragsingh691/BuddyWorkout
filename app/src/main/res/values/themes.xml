@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.BuddyWorkout" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+      Window-level theme only: Compose owns everything the user sees. This keeps
+      the pre-Compose window background on-brand instead of flashing the
+      platform default.
+    -->
+    <style name="Theme.BuddyWorkout" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bw_bg</item>
+        <item name="android:colorPrimary">@color/bw_primary</item>
+        <item name="android:colorAccent">@color/bw_primary</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
 </resources>
