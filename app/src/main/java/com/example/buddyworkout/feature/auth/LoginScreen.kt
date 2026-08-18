@@ -62,13 +62,13 @@ fun LoginScreen(
         Box(
             modifier = Modifier
                 .size(64.dp)
-                .background(BwColors.PrimaryTint, RoundedCornerShape(BwRadius.Tile)),
+                .background(BwColors.PrimaryDark, RoundedCornerShape(BwRadius.Tile)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = BwIcons.Dumbbell,
                 contentDescription = null,
-                tint = BwColors.Primary,
+                tint = BwColors.PrimaryTint,
                 modifier = Modifier.size(30.dp),
             )
         }
