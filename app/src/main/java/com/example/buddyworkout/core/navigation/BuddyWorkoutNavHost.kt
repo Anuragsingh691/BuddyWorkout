@@ -66,6 +66,7 @@ fun BuddyWorkoutNavHost(
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val selectedTab = bottomBarTabFor(backStackEntry?.destination?.route)
+    val motion = rememberNavMotion(navController)
 
     Scaffold(
         modifier = modifier,
@@ -95,13 +96,13 @@ fun BuddyWorkoutNavHost(
             popExitTransition = NavTransitions.popExit,
         ) {
             // --- Auth ---------------------------------------------------
-            composable<Login> {
+            scrimmed<Login>(motion) {
                 LoginRoute(
                     onSignedIn = { navController.navigate(Home) { popUpTo(0) } },
                     onRegisterClick = { navController.navigate(Register) },
                 )
             }
-            composable<Register> {
+            scrimmed<Register>(motion) {
                 RegisterRoute(
                     onRegistered = { navController.navigate(Home) { popUpTo(0) } },
                     onBack = { navController.popBackStack() },
@@ -109,7 +110,7 @@ fun BuddyWorkoutNavHost(
             }
 
             // --- Bottom-nav roots ---------------------------------------
-            composable<Home> {
+            scrimmed<Home>(motion) {
                 HomeScreen(
                     state = PreviewData.home,
                     onCreateChallenge = { navController.navigate(CreateGraph) },
@@ -118,7 +119,7 @@ fun BuddyWorkoutNavHost(
                     onNotifications = {},
                 )
             }
-            composable<Challenges> {
+            scrimmed<Challenges>(motion) {
                 // Temporary UI-local state so the tabs actually switch before a
                 // ViewModel exists. The ViewModel will own this.
                 var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -128,7 +129,7 @@ fun BuddyWorkoutNavHost(
                     onChallengeClick = { id -> navController.navigate(ChallengeDetail(id)) },
                 )
             }
-            composable<Profile> {
+            scrimmed<Profile>(motion) {
                 ProfileRoute(
                     onSignedOut = { navController.navigate(Login) { popUpTo(0) } },
                     onOpenGallery = { navController.navigate(Gallery) },
@@ -136,7 +137,7 @@ fun BuddyWorkoutNavHost(
             }
 
             // --- Challenge flow -----------------------------------------
-            composable<Invite> {
+            scrimmed<Invite>(motion) {
                 InviteScreen(
                     state = PreviewData.invite,
                     onCopyLink = {},
@@ -144,7 +145,7 @@ fun BuddyWorkoutNavHost(
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable<ChallengeDetail> { entry ->
+            scrimmed<ChallengeDetail>(motion) { entry ->
                 val route = entry.toRoute<ChallengeDetail>()
                 // The completed fake ("c0", reachable from the Completed tab)
                 // renders the ended variant, which is the only route to Winner.
@@ -160,7 +161,8 @@ fun BuddyWorkoutNavHost(
                     onCancelChallenge = { navController.popBackStack() },
                 )
             }
-            composable<ChallengeInvite>(
+            scrimmed<ChallengeInvite>(
+                motion = motion,
                 deepLinks = listOf(navDeepLink<ChallengeInvite>(basePath = INVITE_BASE_PATH)),
             ) { entry ->
                 val route = entry.toRoute<ChallengeInvite>()
@@ -172,7 +174,7 @@ fun BuddyWorkoutNavHost(
                     onDecline = { navController.navigate(Home) { popUpTo(0) } },
                 )
             }
-            composable<Record> {
+            scrimmed<Record>(motion) {
                 RecordScreen(
                     state = PreviewData.record,
                     onGrantCameraPermission = {},
@@ -180,7 +182,7 @@ fun BuddyWorkoutNavHost(
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable<Winner> {
+            scrimmed<Winner>(motion) {
                 WinnerScreen(
                     state = PreviewData.winner,
                     onBackToHome = { navController.navigate(Home) { popUpTo(0) } },
@@ -191,7 +193,7 @@ fun BuddyWorkoutNavHost(
             // Scoped as its own graph so the three screens can later share one
             // CreateChallengeViewModel instead of passing results back.
             navigation<CreateGraph>(startDestination = Create) {
-                composable<Create> {
+                scrimmed<Create>(motion) {
                     CreateChallengeScreen(
                         state = PreviewData.createChallenge,
                         onBack = { navController.popBackStack() },
@@ -204,7 +206,7 @@ fun BuddyWorkoutNavHost(
                         },
                     )
                 }
-                composable<BuddyPicker> {
+                scrimmed<BuddyPicker>(motion) {
                     // Temporary UI-local selection, replaced by the shared
                     // CreateChallengeViewModel once the create flow is wired.
                     var buddies by remember { mutableStateOf(PreviewData.buddies) }
@@ -227,7 +229,7 @@ fun BuddyWorkoutNavHost(
                         onBack = { navController.popBackStack() },
                     )
                 }
-                composable<DateTimePicker> {
+                scrimmed<DateTimePicker>(motion) {
                     var preset by rememberSaveable { mutableIntStateOf(3) }
                     DateTimePickerScreen(
                         state = PreviewData.dateTimePicker.copy(selectedPresetIndex = preset),
@@ -239,7 +241,7 @@ fun BuddyWorkoutNavHost(
             }
 
             // --- Development only ---------------------------------------
-            composable<Gallery> { ComponentGallery() }
+            scrimmed<Gallery>(motion) { ComponentGallery() }
         }
     }
 }

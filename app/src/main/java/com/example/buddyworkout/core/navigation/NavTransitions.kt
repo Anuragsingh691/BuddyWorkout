@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.NavBackStackEntry
 
 /** Duration of a push or pop, matching UIKit's navigation controller. */
-private const val PUSH_MILLIS = 350
+internal const val PUSH_MILLIS = 350
 
 /** Duration of the cross-fade between bottom-nav tabs. */
 private const val FADE_MILLIS = 150
@@ -26,7 +26,7 @@ private const val FADE_MILLIS = 150
 private const val PARALLAX = 0.25f
 
 /** UIKit's push curve: eases in gently, decelerates hard at the end. */
-private val PushEasing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f)
+internal val PushEasing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f)
 
 private val PushSpec = tween<IntOffset>(
     durationMillis = PUSH_MILLIS,
