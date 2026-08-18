@@ -74,10 +74,10 @@ object PreviewData {
     )
 
     val leaderboard = listOf(
-        ParticipantUi("u1", "Rahul K.", people[0], rank = 1, reps = "204 reps", subtitle = "Avg form 94%"),
-        ParticipantUi("u2", "Priya M.", people[1], rank = 2, reps = "186 reps", subtitle = "Avg form 91%"),
-        ParticipantUi("u4", "You", me, rank = 3, reps = "128 reps", subtitle = "Avg form 88%", isMe = true),
-        ParticipantUi("u3", "Sameer V.", people[2], rank = 4, reps = "96 reps", subtitle = "Avg form 85%"),
+        ParticipantUi("u4", "You", me, rank = 1, reps = "128", subtitle = "Active now", isMe = true),
+        ParticipantUi("u1", "Rohit Kumar", people[0], rank = 2, reps = "119", subtitle = "2 min ago"),
+        ParticipantUi("u2", "Priya Mehta", people[1], rank = 3, reps = "64", subtitle = "18 min ago"),
+        ParticipantUi("u3", "Sahil Verma", people[2], rank = 4, reps = "40", subtitle = "1 hr ago"),
     )
 
     val buddies = listOf(
@@ -120,9 +120,7 @@ object PreviewData {
     val challengesTab = ChallengesUiState(active = challenges, completed = completedChallenges)
 
     val challengeDetail = ChallengeDetailUiState(
-        remaining = "2d 14h left",
-        startsAt = "Mon 18 Aug, 06:00",
-        endsAt = "Wed 20 Aug, 06:00",
+        remaining = "02:14:53",
         members = people,
         leaderboard = leaderboard,
         isCreator = true,
@@ -163,11 +161,9 @@ object PreviewData {
     )
 
     val challengeInvite = ChallengeInviteUiState(
-        headline = "Rahul K. invited you",
-        members = people.take(3),
-        remaining = "2d 14h left",
-        startsAt = "Mon 18 Aug, 06:00",
-        endsAt = "Wed 20 Aug, 06:00",
+        headline = "Rohit invited you to a group pushup challenge",
+        members = people,
+        windowLabel = "17 Jun 6PM → 18 Jun 6AM",
     )
 
     val record = RecordUiState(

@@ -9,9 +9,6 @@ data class ChallengeDetailUiState(
     val title: String = "Pushup challenge",
     /** e.g. `"2d 14h left"` or `"Ended"` — produced by `formatRemaining`. */
     val remaining: String = "",
-    /** e.g. `"Mon 18 Aug, 06:00"`. */
-    val startsAt: String = "",
-    val endsAt: String = "",
     val members: List<AvatarUi> = emptyList(),
     val leaderboard: List<ParticipantUi> = emptyList(),
     val isCreator: Boolean = false,

@@ -69,6 +69,7 @@ fun AvatarStack(
     modifier: Modifier = Modifier,
     size: Dp = 30.dp,
     max: Int = 4,
+    overlap: Dp = BwSize.AvatarOverlap,
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         avatars.take(max).forEachIndexed { index, avatar ->
@@ -76,7 +77,7 @@ fun AvatarStack(
                 avatar = avatar,
                 size = size,
                 ring = true,
-                modifier = Modifier.offset(x = -(BwSize.AvatarOverlap * index)),
+                modifier = Modifier.offset(x = -(overlap * index)),
             )
         }
     }

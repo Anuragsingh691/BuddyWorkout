@@ -64,6 +64,9 @@ fun BwTopBar(
     modifier: Modifier = Modifier,
     overline: String? = null,
     onBack: (() -> Unit)? = null,
+    /** Chevron by default; the invite screen dismisses with a close icon. */
+    navigationIcon: ImageVector = BwIcons.ChevronLeft,
+    navigationDescription: String = "Back",
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
@@ -76,9 +79,9 @@ fun BwTopBar(
     ) {
         if (onBack != null) {
             BwIconButton(
-                icon = BwIcons.ChevronLeft,
+                icon = navigationIcon,
                 onClick = onBack,
-                contentDescription = "Back",
+                contentDescription = navigationDescription,
                 // offset, not padding: Compose rejects negative padding at
                 // measure time. The shift optically aligns the chevron with
                 // the 16dp gutter without changing the row's layout.
