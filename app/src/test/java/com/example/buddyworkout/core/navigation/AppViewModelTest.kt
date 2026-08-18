@@ -32,6 +32,15 @@ class AppViewModelTest {
      * so it only tracks the source while something collects it — exactly as
      * Compose does via `collectAsStateWithLifecycle`. Tests must therefore hold
      * a live collector or they only ever observe the initial value.
+     *
+     * Do not copy this helper for a test that asserts on *emissions*. A plain
+     * `backgroundScope.launch` never starts its body under `advanceUntilIdle`,
+     * so a collector that appends to a list records nothing and the assertion
+     * passes only when it expects nothing. It works here solely because these
+     * tests read `vm.state.value` — the StateFlow's current value — which the
+     * subscription keeps fresh without the collector body ever running. To
+     * collect emissions, launch on `UnconfinedTestDispatcher(testScheduler)`,
+     * as the auth ViewModel tests do.
      */
     private fun TestScope.collecting(vm: AppViewModel) {
         backgroundScope.launch { vm.state.collect {} }

@@ -20,13 +20,12 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
-import com.example.buddyworkout.BuildConfig
 import com.example.buddyworkout.core.ui.component.BwBottomNav
 import com.example.buddyworkout.core.ui.gallery.ComponentGallery
 import com.example.buddyworkout.core.ui.preview.PreviewData
 import com.example.buddyworkout.core.ui.theme.BwColors
-import com.example.buddyworkout.feature.auth.LoginScreen
-import com.example.buddyworkout.feature.auth.RegisterScreen
+import com.example.buddyworkout.feature.auth.LoginRoute
+import com.example.buddyworkout.feature.auth.RegisterRoute
 import com.example.buddyworkout.feature.challenge.ChallengeDetailScreen
 import com.example.buddyworkout.feature.challenge.ChallengesScreen
 import com.example.buddyworkout.feature.challenge.create.BuddyPickerScreen
@@ -36,7 +35,7 @@ import com.example.buddyworkout.feature.challenge.create.DateTimePickerScreen
 import com.example.buddyworkout.feature.home.HomeScreen
 import com.example.buddyworkout.feature.invite.ChallengeInviteScreen
 import com.example.buddyworkout.feature.invite.InviteScreen
-import com.example.buddyworkout.feature.profile.ProfileScreen
+import com.example.buddyworkout.feature.profile.ProfileRoute
 import com.example.buddyworkout.feature.record.RecordScreen
 import com.example.buddyworkout.feature.result.WinnerScreen
 import kotlinx.coroutines.flow.Flow
@@ -93,22 +92,14 @@ fun BuddyWorkoutNavHost(
         ) {
             // --- Auth ---------------------------------------------------
             composable<Login> {
-                LoginScreen(
-                    state = PreviewData.login,
-                    onEmailChange = {},
-                    onPasswordChange = {},
-                    onSignIn = { navController.navigate(Home) { popUpTo(0) } },
-                    onGoogleSignIn = { navController.navigate(Home) { popUpTo(0) } },
+                LoginRoute(
+                    onSignedIn = { navController.navigate(Home) { popUpTo(0) } },
                     onRegisterClick = { navController.navigate(Register) },
                 )
             }
             composable<Register> {
-                RegisterScreen(
-                    state = PreviewData.register,
-                    onNameChange = {},
-                    onEmailChange = {},
-                    onPasswordChange = {},
-                    onCreateAccount = { navController.navigate(Home) { popUpTo(0) } },
+                RegisterRoute(
+                    onRegistered = { navController.navigate(Home) { popUpTo(0) } },
                     onSignInClick = { navController.popBackStack() },
                     onBack = { navController.popBackStack() },
                 )
@@ -135,9 +126,8 @@ fun BuddyWorkoutNavHost(
                 )
             }
             composable<Profile> {
-                ProfileScreen(
-                    state = PreviewData.profile.copy(showGallery = BuildConfig.DEBUG),
-                    onSignOut = { navController.navigate(Login) { popUpTo(0) } },
+                ProfileRoute(
+                    onSignedOut = { navController.navigate(Login) { popUpTo(0) } },
                     onOpenGallery = { navController.navigate(Gallery) },
                 )
             }
