@@ -40,20 +40,22 @@ object PreviewData {
         ChallengeUi(
             id = "c1",
             title = "Pushup challenge",
-            summary = "4 buddies · 2d 14h left",
-            progress = 0.62f,
+            summary = "with Rohit, Priya +2 · ends in 3 days",
+            progress = 0.64f,
             stat = "128 reps",
             members = people,
-            remaining = "2d 14h left",
+            remaining = "3 days left",
+            rank = 1,
         ),
         ChallengeUi(
             id = "c2",
             title = "Pushup challenge",
-            summary = "2 buddies · 5h 40m left",
-            progress = 0.88f,
-            stat = "64 reps",
+            summary = "with Sahil, Neha +1 · ends in 6 days",
+            progress = 0.38f,
+            stat = "42 reps",
             members = people.take(2),
-            remaining = "5h 40m left",
+            remaining = "6 days left",
+            rank = 2,
         ),
     )
 
@@ -92,9 +94,9 @@ object PreviewData {
     )
 
     val home = HomeUiState(
-        greeting = "Hey, Anurag",
+        greeting = "Hi, Anurag 👋",
+        avatar = me,
         activeChallenges = challenges,
-        atChallengeLimit = true,
     )
 
     val profile = ProfileUiState(
