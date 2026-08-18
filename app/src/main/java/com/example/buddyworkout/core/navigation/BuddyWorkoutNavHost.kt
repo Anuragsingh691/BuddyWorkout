@@ -89,6 +89,10 @@ fun BuddyWorkoutNavHost(
             navController = navController,
             startDestination = startDestination,
             modifier = Modifier.padding(padding),
+            enterTransition = NavTransitions.enter,
+            exitTransition = NavTransitions.exit,
+            popEnterTransition = NavTransitions.popEnter,
+            popExitTransition = NavTransitions.popExit,
         ) {
             // --- Auth ---------------------------------------------------
             composable<Login> {
