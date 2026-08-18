@@ -20,6 +20,7 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
+import com.example.buddyworkout.core.common.CalendarMonth
 import com.example.buddyworkout.core.ui.component.BwBottomNav
 import com.example.buddyworkout.core.ui.gallery.ComponentGallery
 import com.example.buddyworkout.core.ui.preview.PreviewData
@@ -31,6 +32,7 @@ import com.example.buddyworkout.feature.challenge.ChallengesScreen
 import com.example.buddyworkout.feature.challenge.create.BuddyPickerScreen
 import com.example.buddyworkout.feature.challenge.create.CreateChallengeScreen
 import com.example.buddyworkout.feature.challenge.create.MAX_BUDDIES
+import com.example.buddyworkout.feature.challenge.create.DateTimeMode
 import com.example.buddyworkout.feature.challenge.create.DateTimePickerScreen
 import com.example.buddyworkout.feature.home.HomeScreen
 import com.example.buddyworkout.feature.invite.ChallengeInviteScreen
@@ -127,6 +129,7 @@ fun BuddyWorkoutNavHost(
                     state = PreviewData.challengesTab.copy(selectedTab = tab),
                     onTabSelect = { tab = it },
                     onChallengeClick = { id -> navController.navigate(ChallengeDetail(id)) },
+                    onCreateChallenge = { navController.navigate(CreateGraph) },
                 )
             }
             scrimmed<Profile>(motion) {
@@ -195,11 +198,16 @@ fun BuddyWorkoutNavHost(
             // CreateChallengeViewModel instead of passing results back.
             navigation<CreateGraph>(startDestination = Create) {
                 scrimmed<Create>(motion) {
+                    // Temporary UI-local duration until the shared
+                    // CreateChallengeViewModel owns it.
+                    var duration by rememberSaveable { mutableIntStateOf(1) }
                     CreateChallengeScreen(
-                        state = PreviewData.createChallenge,
+                        state = PreviewData.createChallenge.copy(selectedDurationIndex = duration),
                         onBack = { navController.popBackStack() },
                         onPickBuddies = { navController.navigate(BuddyPicker) },
-                        onPickWindow = { navController.navigate(DateTimePicker) },
+                        onSelectDuration = { duration = it },
+                        onPickStart = { navController.navigate(DateTimePicker) },
+                        onPickEnd = { navController.navigate(DateTimePicker) },
                         onCreate = {
                             navController.navigate(ChallengeDetail("new")) {
                                 popUpTo(CreateGraph) { inclusive = true }
@@ -231,10 +239,41 @@ fun BuddyWorkoutNavHost(
                     )
                 }
                 scrimmed<DateTimePicker>(motion) {
-                    var preset by rememberSaveable { mutableIntStateOf(3) }
+                    // Temporary UI-local sheet state, likewise replaced by the
+                    // shared CreateChallengeViewModel. The month is held as two
+                    // ints so it survives process death without a custom Saver.
+                    var mode by rememberSaveable { mutableStateOf(DateTimeMode.Date) }
+                    var year by rememberSaveable { mutableIntStateOf(2026) }
+                    var month by rememberSaveable { mutableIntStateOf(6) }
+                    var day by rememberSaveable { mutableStateOf<Int?>(17) }
+                    var hour by rememberSaveable { mutableIntStateOf(6) }
+                    var minute by rememberSaveable { mutableIntStateOf(0) }
+                    var isPm by rememberSaveable { mutableStateOf(true) }
+
+                    val current = CalendarMonth(year, month)
                     DateTimePickerScreen(
-                        state = PreviewData.dateTimePicker.copy(selectedPresetIndex = preset),
-                        onSelectPreset = { preset = it },
+                        state = PreviewData.dateTimePicker.copy(
+                            mode = mode,
+                            month = current,
+                            selectedDay = day,
+                            hour = hour,
+                            minute = minute,
+                            isPm = isPm,
+                        ),
+                        onSelectMode = { mode = it },
+                        onSelectDay = { day = it },
+                        onPreviousMonth = {
+                            current.previous().let { year = it.year; month = it.month }
+                            // The day may not exist in the month stepped into.
+                            day = null
+                        },
+                        onNextMonth = {
+                            current.next().let { year = it.year; month = it.month }
+                            day = null
+                        },
+                        onSelectHour = { hour = it },
+                        onSelectMinute = { minute = it },
+                        onToggleMeridiem = { isPm = !isPm },
                         onSave = { navController.popBackStack() },
                         onBack = { navController.popBackStack() },
                     )

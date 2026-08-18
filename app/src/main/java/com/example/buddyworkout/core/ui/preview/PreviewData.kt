@@ -1,5 +1,6 @@
 package com.example.buddyworkout.core.ui.preview
 
+import com.example.buddyworkout.core.common.CalendarMonth
 import com.example.buddyworkout.core.ui.component.AvatarUi
 import com.example.buddyworkout.core.ui.model.BuddyUi
 import com.example.buddyworkout.core.ui.model.ChallengeUi
@@ -80,9 +81,14 @@ object PreviewData {
     )
 
     val buddies = listOf(
-        BuddyUi("u1", "Rahul K.", people[0], subtitle = "In 1 active challenge", selected = true),
-        BuddyUi("u2", "Priya M.", people[1], subtitle = "Free", selected = true),
-        BuddyUi("u3", "Sameer V.", people[2], subtitle = "In 2 active challenges"),
+        BuddyUi("u1", "Rohit Kumar", AvatarUi("RK", color = avatarColorFor("RK")), selected = true),
+        BuddyUi("u2", "Priya Mehta", AvatarUi("PM", color = avatarColorFor("PM")), selected = true),
+        BuddyUi("u3", "Sahil Verma", AvatarUi("SV", color = avatarColorFor("SV"))),
+        BuddyUi("u4", "Neha Arora", AvatarUi("NA", color = avatarColorFor("NA"))),
+        BuddyUi("u5", "Aman Gupta", AvatarUi("AG", color = avatarColorFor("AG"))),
+        BuddyUi("u6", "Karan Singh", AvatarUi("KS", color = avatarColorFor("KS"))),
+        BuddyUi("u7", "Divya Rao", AvatarUi("DR", color = avatarColorFor("DR"))),
+        BuddyUi("u8", "Meera Nair", AvatarUi("MN", color = avatarColorFor("MN"))),
     )
 
     val login = LoginUiState(email = "anurag@example.com", password = "secret123")
@@ -124,18 +130,22 @@ object PreviewData {
 
     val createChallenge = CreateChallengeUiState(
         selectedBuddies = buddies.filter { it.selected },
-        startLabel = "Now",
-        endLabel = "Wed 20 Aug, 06:00",
-        durationLabel = "2 days",
+        limitNotice = "Group pushup challenge · you have 1 of 2 active",
+        selectedDurationIndex = 1,
+        startLabel = "17 Jun · 6:00 PM",
+        endLabel = "18 Jun · 6:00 AM",
+        durationLabel = "12-hour challenge",
     )
 
     val buddyPicker = BuddyPickerUiState(buddies = buddies)
 
     val dateTimePicker = DateTimePickerUiState(
-        presets = listOf("6 hours", "12 hours", "1 day", "3 days", "1 week", "2 weeks"),
-        selectedPresetIndex = 3,
-        startLabel = "Now (Mon 18 Aug, 06:00)",
-        endLabel = "Thu 21 Aug, 06:00",
+        title = "Set start",
+        month = CalendarMonth(2026, 6),
+        selectedDay = 17,
+        hour = 6,
+        minute = 0,
+        isPm = true,
     )
 
     val invite = InviteUiState(
