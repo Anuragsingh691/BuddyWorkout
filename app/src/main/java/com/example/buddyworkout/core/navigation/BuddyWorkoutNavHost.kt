@@ -16,11 +16,33 @@ import androidx.navigation.toRoute
 import com.example.buddyworkout.BuildConfig
 import com.example.buddyworkout.core.ui.component.BwBottomNav
 import com.example.buddyworkout.core.ui.gallery.ComponentGallery
+import com.example.buddyworkout.core.ui.preview.PreviewData
 import com.example.buddyworkout.core.ui.theme.BwColors
+import com.example.buddyworkout.feature.auth.LoginScreen
+import com.example.buddyworkout.feature.auth.RegisterScreen
+import com.example.buddyworkout.feature.challenge.ChallengeDetailScreen
+import com.example.buddyworkout.feature.challenge.ChallengesScreen
+import com.example.buddyworkout.feature.challenge.create.BuddyPickerScreen
+import com.example.buddyworkout.feature.challenge.create.CreateChallengeScreen
+import com.example.buddyworkout.feature.challenge.create.DateTimePickerScreen
+import com.example.buddyworkout.feature.home.HomeScreen
+import com.example.buddyworkout.feature.invite.ChallengeInviteScreen
+import com.example.buddyworkout.feature.invite.InviteScreen
+import com.example.buddyworkout.feature.profile.ProfileScreen
+import com.example.buddyworkout.feature.record.RecordScreen
+import com.example.buddyworkout.feature.result.WinnerScreen
 
 /** Host of the App Links used for challenge invites. */
 private const val INVITE_BASE_PATH = "https://commworkout.app/c"
 
+/**
+ * The app's single navigation graph.
+ *
+ * Screens are fed from [PreviewData] because no ViewModels exist yet. Each
+ * `PreviewData.x` below is one call site to flip to an `XRoute(...)` wrapper
+ * when its feature gets wired to Firebase — the screens themselves do not
+ * change.
+ */
 @Composable
 fun BuddyWorkoutNavHost(
     startDestination: Any,
@@ -55,131 +77,130 @@ fun BuddyWorkoutNavHost(
         ) {
             // --- Auth ---------------------------------------------------
             composable<Login> {
-                PlaceholderScreen(
-                    title = "Sign in",
-                    actions = listOf(
-                        "Sign in" to { navController.navigate(Home) { popUpTo(0) } },
-                        "Create an account" to { navController.navigate(Register) },
-                    ),
+                LoginScreen(
+                    state = PreviewData.login,
+                    onEmailChange = {},
+                    onPasswordChange = {},
+                    onSignIn = { navController.navigate(Home) { popUpTo(0) } },
+                    onGoogleSignIn = { navController.navigate(Home) { popUpTo(0) } },
+                    onRegisterClick = { navController.navigate(Register) },
                 )
             }
             composable<Register> {
-                PlaceholderScreen(
-                    title = "Create account",
+                RegisterScreen(
+                    state = PreviewData.register,
+                    onNameChange = {},
+                    onEmailChange = {},
+                    onPasswordChange = {},
+                    onCreateAccount = { navController.navigate(Home) { popUpTo(0) } },
+                    onSignInClick = { navController.popBackStack() },
                     onBack = { navController.popBackStack() },
-                    actions = listOf(
-                        "Register" to { navController.navigate(Home) { popUpTo(0) } },
-                    ),
                 )
             }
 
             // --- Bottom-nav roots ---------------------------------------
             composable<Home> {
-                PlaceholderScreen(
-                    title = "Home",
-                    actions = listOf(
-                        "Create challenge" to { navController.navigate(CreateGraph) },
-                        "Invite buddies" to { navController.navigate(Invite) },
-                        "Open a challenge" to { navController.navigate(ChallengeDetail("demo")) },
-                    ),
+                HomeScreen(
+                    state = PreviewData.home,
+                    onCreateChallenge = { navController.navigate(CreateGraph) },
+                    onInviteBuddies = { navController.navigate(Invite) },
+                    onChallengeClick = { id -> navController.navigate(ChallengeDetail(id)) },
+                    onNotifications = {},
                 )
             }
             composable<Challenges> {
-                PlaceholderScreen(
-                    title = "Challenges",
-                    actions = listOf(
-                        "Open a challenge" to { navController.navigate(ChallengeDetail("demo")) },
-                    ),
+                ChallengesScreen(
+                    state = PreviewData.challengesTab,
+                    onTabSelect = {},
+                    onChallengeClick = { id -> navController.navigate(ChallengeDetail(id)) },
                 )
             }
             composable<Profile> {
-                PlaceholderScreen(
-                    title = "Profile",
-                    actions = buildList {
-                        add("Sign out" to { navController.navigate(Login) { popUpTo(0) } })
-                        if (BuildConfig.DEBUG) {
-                            add("Component gallery" to { navController.navigate(Gallery) })
-                        }
-                    },
+                ProfileScreen(
+                    state = PreviewData.profile.copy(showGallery = BuildConfig.DEBUG),
+                    onSignOut = { navController.navigate(Login) { popUpTo(0) } },
+                    onOpenGallery = { navController.navigate(Gallery) },
                 )
             }
 
             // --- Challenge flow -----------------------------------------
             composable<Invite> {
-                PlaceholderScreen(
-                    title = "Invite buddies",
+                InviteScreen(
+                    state = PreviewData.invite,
+                    onCopyLink = {},
+                    onShareLink = {},
                     onBack = { navController.popBackStack() },
                 )
             }
             composable<ChallengeDetail> { entry ->
                 val route = entry.toRoute<ChallengeDetail>()
-                PlaceholderScreen(
-                    title = "Challenge ${route.id}",
+                ChallengeDetailScreen(
+                    state = PreviewData.challengeDetail,
                     onBack = { navController.popBackStack() },
-                    actions = listOf(
-                        "Record workout" to { navController.navigate(Record(route.id)) },
-                        "See winner" to { navController.navigate(Winner(route.id)) },
-                    ),
+                    onRecordWorkout = { navController.navigate(Record(route.id)) },
+                    onSeeWinner = { navController.navigate(Winner(route.id)) },
+                    onCancelChallenge = { navController.popBackStack() },
                 )
             }
             composable<ChallengeInvite>(
                 deepLinks = listOf(navDeepLink<ChallengeInvite>(basePath = INVITE_BASE_PATH)),
             ) { entry ->
                 val route = entry.toRoute<ChallengeInvite>()
-                PlaceholderScreen(
-                    title = "Invite ${route.code}",
-                    actions = listOf(
-                        "Accept & join" to { navController.navigate(ChallengeDetail(route.code)) },
-                        "Not now" to { navController.navigate(Home) { popUpTo(0) } },
-                    ),
+                ChallengeInviteScreen(
+                    state = PreviewData.challengeInvite,
+                    onAccept = {
+                        navController.navigate(ChallengeDetail(route.code)) { popUpTo(0) }
+                    },
+                    onDecline = { navController.navigate(Home) { popUpTo(0) } },
                 )
             }
             composable<Record> {
-                PlaceholderScreen(
-                    title = "Record",
+                RecordScreen(
+                    state = PreviewData.record,
+                    onGrantCameraPermission = {},
+                    onStopAndSave = { navController.popBackStack() },
                     onBack = { navController.popBackStack() },
-                    actions = listOf("Stop & save" to { navController.popBackStack() }),
                 )
             }
-            composable<Winner> { entry ->
-                val route = entry.toRoute<Winner>()
-                PlaceholderScreen(
-                    title = "Winner — ${route.challengeId}",
-                    actions = listOf(
-                        "Back to home" to { navController.navigate(Home) { popUpTo(0) } },
-                    ),
+            composable<Winner> {
+                WinnerScreen(
+                    state = PreviewData.winner,
+                    onBackToHome = { navController.navigate(Home) { popUpTo(0) } },
                 )
             }
 
             // --- Create flow (nested graph) -----------------------------
+            // Scoped as its own graph so the three screens can later share one
+            // CreateChallengeViewModel instead of passing results back.
             navigation<CreateGraph>(startDestination = Create) {
                 composable<Create> {
-                    PlaceholderScreen(
-                        title = "New challenge",
+                    CreateChallengeScreen(
+                        state = PreviewData.createChallenge,
                         onBack = { navController.popBackStack() },
-                        actions = listOf(
-                            "Add buddies" to { navController.navigate(BuddyPicker) },
-                            "Set start & end" to { navController.navigate(DateTimePicker) },
-                            "Create" to {
-                                navController.navigate(ChallengeDetail("new")) {
-                                    popUpTo(CreateGraph) { inclusive = true }
-                                }
-                            },
-                        ),
+                        onPickBuddies = { navController.navigate(BuddyPicker) },
+                        onPickWindow = { navController.navigate(DateTimePicker) },
+                        onCreate = {
+                            navController.navigate(ChallengeDetail("new")) {
+                                popUpTo(CreateGraph) { inclusive = true }
+                            }
+                        },
                     )
                 }
                 composable<BuddyPicker> {
-                    PlaceholderScreen(
-                        title = "Add buddies",
+                    BuddyPickerScreen(
+                        state = PreviewData.buddyPicker,
+                        onQueryChange = {},
+                        onToggleBuddy = {},
+                        onDone = { navController.popBackStack() },
                         onBack = { navController.popBackStack() },
-                        actions = listOf("Done" to { navController.popBackStack() }),
                     )
                 }
                 composable<DateTimePicker> {
-                    PlaceholderScreen(
-                        title = "Start & end",
+                    DateTimePickerScreen(
+                        state = PreviewData.dateTimePicker,
+                        onSelectPreset = {},
+                        onSave = { navController.popBackStack() },
                         onBack = { navController.popBackStack() },
-                        actions = listOf("Save" to { navController.popBackStack() }),
                     )
                 }
             }
