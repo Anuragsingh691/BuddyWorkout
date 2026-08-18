@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.buddyworkout.data.auth.AuthError
 import com.example.buddyworkout.data.auth.AuthException
 import com.example.buddyworkout.data.auth.AuthRepository
+import com.example.buddyworkout.data.user.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val userRepository: UserRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LoginUiState())
@@ -66,7 +68,11 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    private suspend fun complete(result: Result<Unit>) = result.fold(
+    private suspend fun complete(result: Result<Unit>) = result
+        // Backfills `users/{uid}` for accounts that predate it — every Google
+        // account, since those never pass through the register screen.
+        .mapCatching { userRepository.ensureProfile().getOrThrow() }
+        .fold(
         onSuccess = {
             _state.update { it.copy(isLoading = false, error = null) }
             _signedIn.send(Unit)

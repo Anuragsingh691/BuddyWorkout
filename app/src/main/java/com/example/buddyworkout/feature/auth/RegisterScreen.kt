@@ -1,6 +1,5 @@
 package com.example.buddyworkout.feature.auth
 
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -39,6 +38,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.buddyworkout.core.common.decodeSampledBitmap
 import com.example.buddyworkout.core.ui.component.BwButton
 import com.example.buddyworkout.core.ui.component.BwTextField
 import com.example.buddyworkout.core.ui.component.BwTopBar
@@ -50,6 +50,9 @@ import com.example.buddyworkout.core.ui.theme.BwColors
 import com.example.buddyworkout.core.ui.theme.BwSpace
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+/** Longest edge the picked avatar is decoded to, for a 96dp circle. */
+private const val AVATAR_TARGET_PX = 288
 
 /** Gap between stacked `.field` blocks in the export (`margin-top:14px`). */
 private val FieldGap = 14.dp
@@ -183,8 +186,8 @@ fun RegisterScreen(
 
 /**
  * The 96dp avatar well with the green "+" badge. Tapping either opens the
- * system photo picker; the chosen image is shown locally only — nothing
- * uploads it yet.
+ * system photo picker. The pick is shown from the local URI; it is uploaded to
+ * Storage only once the account exists and there is a uid to store it under.
  */
 @Composable
 private fun ProfilePhotoPicker(
@@ -274,31 +277,14 @@ private fun rememberPhotoBitmap(uri: String?): ImageBitmap? {
     LaunchedEffect(uri) {
         bitmap = uri?.let { value ->
             withContext(Dispatchers.IO) {
-                runCatching { decodeDownsampled(context, Uri.parse(value)) }.getOrNull()
+                runCatching {
+                    decodeSampledBitmap(context, Uri.parse(value), AVATAR_TARGET_PX)
+                        ?.asImageBitmap()
+                }.getOrNull()
             }
         }
     }
     return bitmap
-}
-
-/** Target edge length, in pixels, for the decoded avatar. */
-private const val AVATAR_TARGET_PX = 288
-
-private fun decodeDownsampled(
-    context: android.content.Context,
-    uri: Uri,
-): ImageBitmap? {
-    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-
-    var sample = 1
-    val longest = maxOf(bounds.outWidth, bounds.outHeight)
-    while (longest / sample > AVATAR_TARGET_PX * 2) sample *= 2
-
-    val options = BitmapFactory.Options().apply { inSampleSize = sample }
-    return context.contentResolver.openInputStream(uri)?.use { stream ->
-        BitmapFactory.decodeStream(stream, null, options)?.asImageBitmap()
-    }
 }
 
 @Preview(showBackground = true, widthDp = 380, heightDp = 800)

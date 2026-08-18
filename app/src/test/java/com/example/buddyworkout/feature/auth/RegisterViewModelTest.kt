@@ -2,6 +2,7 @@ package com.example.buddyworkout.feature.auth
 
 import com.example.buddyworkout.data.auth.AuthError
 import com.example.buddyworkout.data.auth.FakeAuthRepository
+import com.example.buddyworkout.data.user.FakeUserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -12,6 +13,8 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -20,11 +23,12 @@ class RegisterViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val repo = FakeAuthRepository()
+    private val users = FakeUserRepository()
 
     @Before fun setUp() = Dispatchers.setMain(dispatcher)
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel() = RegisterViewModel(repo)
+    private fun viewModel() = RegisterViewModel(repo, users)
 
     private fun RegisterViewModel.fillValidForm() {
         onNameChange("Anurag S.")
@@ -123,4 +127,83 @@ class RegisterViewModelTest {
         assertEquals(1, repo.registerCalls)
         assertTrue(vm.state.value.isLoading)
     }
+
+    @Test fun `registering writes the Firestore profile with the form's details`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            vm.fillValidForm()
+            vm.onPhoneChange("+91 98765 43210")
+            vm.onCreateAccount()
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(1, users.ensureCalls)
+            assertEquals("Anurag S.", users.lastName)
+            assertEquals("+91 98765 43210", users.lastPhone)
+        }
+
+    @Test fun `a picked photo is uploaded after the account exists`() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.fillValidForm()
+        vm.onPhotoSelected("content://media/picked/1")
+        vm.onCreateAccount()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, users.uploadCalls)
+        assertEquals("content://media/picked/1", users.lastUri)
+    }
+
+    @Test fun `no photo means no upload`() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.fillValidForm()
+        vm.onCreateAccount()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(0, users.uploadCalls)
+    }
+
+    @Test fun `a failed photo upload still registers the account`() = runTest(dispatcher) {
+        users.uploadResult = Result.failure(IllegalStateException("network"))
+        val vm = viewModel()
+        val events = mutableListOf<Unit>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.registered.collect { events += it } }
+
+        vm.fillValidForm()
+        vm.onPhotoSelected("content://media/picked/1")
+        vm.onCreateAccount()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, events.size)
+        assertNull(vm.state.value.error)
+        assertFalse(vm.state.value.isLoading)
+    }
+
+    @Test fun `a failed profile write surfaces instead of pretending to succeed`() =
+        runTest(dispatcher) {
+            users.ensureResult = Result.failure(IllegalStateException("permission denied"))
+            val vm = viewModel()
+            val events = mutableListOf<Unit>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.registered.collect { events += it } }
+
+            vm.fillValidForm()
+            vm.onCreateAccount()
+            testScheduler.advanceUntilIdle()
+
+            assertTrue(events.isEmpty())
+            assertNotNull(vm.state.value.error)
+            assertFalse(vm.state.value.isLoading)
+        }
+
+    @Test fun `nothing is written when the account itself could not be created`() =
+        runTest(dispatcher) {
+            repo.failWith(AuthError.EmailInUse)
+            val vm = viewModel()
+
+            vm.fillValidForm()
+            vm.onPhotoSelected("content://media/picked/1")
+            vm.onCreateAccount()
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(0, users.ensureCalls)
+            assertEquals(0, users.uploadCalls)
+        }
 }

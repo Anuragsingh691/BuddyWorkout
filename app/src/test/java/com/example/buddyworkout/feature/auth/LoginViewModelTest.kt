@@ -2,6 +2,7 @@ package com.example.buddyworkout.feature.auth
 
 import com.example.buddyworkout.data.auth.AuthError
 import com.example.buddyworkout.data.auth.FakeAuthRepository
+import com.example.buddyworkout.data.user.FakeUserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -27,11 +28,12 @@ class LoginViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val repo = FakeAuthRepository()
+    private val users = FakeUserRepository()
 
     @Before fun setUp() = Dispatchers.setMain(dispatcher)
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel() = LoginViewModel(repo)
+    private fun viewModel() = LoginViewModel(repo, users)
 
     private fun LoginViewModel.fillValidCredentials() {
         onEmailChange("anurag@example.com")
@@ -196,5 +198,37 @@ class LoginViewModelTest {
         job.cancel()
 
         assertEquals(1, received.size)
+    }
+
+    @Test fun `signing in backfills the Firestore profile`() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.onEmailChange("anurag@example.com")
+        vm.onPasswordChange("secret123")
+        vm.onSignIn()
+        testScheduler.advanceUntilIdle()
+
+        // Null name and phone: a sign-in has no form to read them from, so the
+        // repository falls back to what Auth already knows.
+        assertEquals(1, users.ensureCalls)
+        assertNull(users.lastName)
+    }
+
+    @Test fun `a Google sign-in backfills the profile too`() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.onGoogleSignIn { Result.success("token") }
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, users.ensureCalls)
+    }
+
+    @Test fun `a failed sign-in writes nothing`() = runTest(dispatcher) {
+        repo.failWith(AuthError.InvalidCredentials)
+        val vm = viewModel()
+        vm.onEmailChange("anurag@example.com")
+        vm.onPasswordChange("wrong")
+        vm.onSignIn()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(0, users.ensureCalls)
     }
 }

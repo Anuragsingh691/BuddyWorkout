@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.buddyworkout.core.ui.component.AvatarUi
 import com.example.buddyworkout.data.auth.AuthRepository
 import com.example.buddyworkout.data.auth.AuthUser
+import com.example.buddyworkout.data.user.UserProfile
+import com.example.buddyworkout.data.user.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -19,18 +21,27 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    userRepository: UserRepository,
 ) : ViewModel() {
 
     /**
-     * Read once at construction: Auth identity only changes across a sign-in,
-     * and signing out leaves this screen immediately. The stats card stays
-     * empty until challenge data exists — it is not an auth concern.
+     * Seeded from Auth so the screen has a name to draw immediately, then
+     * replaced by the Firestore document once it arrives. Auth is the faster
+     * of the two and knows less; the document is the record.
      */
     private val _state = MutableStateFlow(authRepository.currentUser.toUiState())
     val state: StateFlow<ProfileUiState> = _state.asStateFlow()
 
     private val _signedOut = Channel<Unit>(Channel.BUFFERED)
     val signedOut: Flow<Unit> = _signedOut.receiveAsFlow()
+
+    init {
+        viewModelScope.launch {
+            userRepository.observeProfile().collect { profile ->
+                if (profile != null) _state.update { it.merge(profile) }
+            }
+        }
+    }
 
     /**
      * [clearCredentialState] is supplied by the call site: without it Google
@@ -48,6 +59,21 @@ class ProfileViewModel @Inject constructor(
         }
     }
 }
+
+private fun ProfileUiState.merge(profile: UserProfile) = copy(
+    name = profile.displayName.ifBlank { name },
+    email = profile.email.ifBlank { email },
+    avatar = AvatarUi(
+        initials = initialsOf(profile.displayName.ifBlank { name }),
+        key = profile.uid,
+    ),
+    stats = listOf(
+        StatUi("Phone", profile.phone ?: "Not set"),
+        // Stands in until avatars render remote images; without it the only
+        // proof the upload landed is the Firebase console.
+        StatUi("Profile photo", if (profile.photoUrl != null) "Uploaded" else "None"),
+    ),
+)
 
 private fun AuthUser?.toUiState(): ProfileUiState {
     // Google accounts always carry a display name; email sign-ups have one only

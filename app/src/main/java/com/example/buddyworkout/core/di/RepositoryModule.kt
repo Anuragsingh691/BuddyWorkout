@@ -2,6 +2,8 @@ package com.example.buddyworkout.core.di
 
 import com.example.buddyworkout.data.auth.AuthRepository
 import com.example.buddyworkout.data.auth.AuthRepositoryImpl
+import com.example.buddyworkout.data.user.UserRepository
+import com.example.buddyworkout.data.user.UserRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -16,4 +18,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun authRepository(impl: AuthRepositoryImpl): AuthRepository
+
+    @Binds
+    @Singleton
+    abstract fun userRepository(impl: UserRepositoryImpl): UserRepository
 }
