@@ -11,11 +11,11 @@ class FakeUserRepository : UserRepository {
     var lastName: String? = null
     var lastPhone: String? = null
 
-    var uploadCalls: Int = 0
+    var avatarCalls: Int = 0
     var lastUri: String? = null
 
     var ensureResult: Result<Unit> = Result.success(Unit)
-    var uploadResult: Result<String> = Result.success("https://example.test/profile.jpg")
+    var avatarResult: Result<Unit> = Result.success(Unit)
 
     val profile = MutableStateFlow<UserProfile?>(null)
 
@@ -29,11 +29,15 @@ class FakeUserRepository : UserRepository {
         return ensureResult
     }
 
-    override suspend fun uploadPhoto(uri: String): Result<String> {
-        uploadCalls++
+    override suspend fun saveAvatar(uri: String): Result<Unit> {
+        avatarCalls++
         lastUri = uri
-        return uploadResult
+        return avatarResult
     }
+
+    val avatar = MutableStateFlow<ByteArray?>(null)
+
+    override fun observeAvatar(): Flow<ByteArray?> = avatar
 
     override fun observeProfile(): Flow<UserProfile?> =
         observeError?.let { flow<UserProfile?> { throw it } } ?: profile

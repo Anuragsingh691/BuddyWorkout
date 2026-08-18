@@ -15,6 +15,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -99,17 +100,53 @@ class ProfileViewModelTest {
         assertEquals("Anurag Shishodia", vm.state.value.name)
         assertEquals("AS", vm.state.value.avatar.initials)
         assertEquals("+91 98765 43210", vm.state.value.stats.first { it.label == "Phone" }.value)
-        assertEquals("Uploaded", vm.state.value.stats.first { it.label == "Profile photo" }.value)
     }
 
-    @Test fun `a profile with no photo says so`() = runTest(dispatcher) {
+    @Test fun `a profile with no phone says so`() = runTest(dispatcher) {
         val vm = ProfileViewModel(repo, users)
         users.profile.value = UserProfile(uid = "u1", displayName = "Anurag S.")
         testScheduler.advanceUntilIdle()
 
-        assertEquals("None", vm.state.value.stats.first { it.label == "Profile photo" }.value)
         assertEquals("Not set", vm.state.value.stats.first { it.label == "Phone" }.value)
     }
+
+    @Test fun `no stored avatar leaves the initials showing`() = runTest(dispatcher) {
+        val vm = ProfileViewModel(repo, users)
+        users.profile.value = UserProfile(uid = "u1", displayName = "Anurag Shishodia")
+        testScheduler.advanceUntilIdle()
+
+        assertNull(vm.state.value.avatar.photo)
+        assertEquals("AS", vm.state.value.avatar.initials)
+    }
+
+    @Test fun `undecodable avatar bytes fall back to initials rather than crashing`() =
+        runTest(dispatcher) {
+            val vm = ProfileViewModel(repo, users)
+            // BitmapFactory is stubbed in JVM tests, so any bytes decode to
+            // null here — which is exactly the junk-data path being asserted.
+            users.avatar.value = byteArrayOf(1, 2, 3)
+            users.profile.value = UserProfile(uid = "u1", displayName = "Anurag Shishodia")
+            testScheduler.advanceUntilIdle()
+
+            assertNull(vm.state.value.avatar.photo)
+            assertEquals("AS", vm.state.value.avatar.initials)
+        }
+
+    @Test fun `a later profile update keeps the avatar that was already decoded`() =
+        runTest(dispatcher) {
+            val vm = ProfileViewModel(repo, users)
+            users.profile.value = UserProfile(uid = "u1", displayName = "Anurag Shishodia")
+            testScheduler.advanceUntilIdle()
+            val before = vm.state.value.avatar.photo
+
+            users.profile.value = UserProfile(uid = "u1", displayName = "Anurag S.")
+            testScheduler.advanceUntilIdle()
+
+            // merge() rebuilds the avatar for the new name; the photo must
+            // survive that rebuild rather than being dropped on every edit.
+            assertEquals(before, vm.state.value.avatar.photo)
+            assertEquals("AS", vm.state.value.avatar.initials)
+        }
 
     @Test fun `a rejected profile listen is reported, not fatal`() = runTest(dispatcher) {
         // Firestore rejects the listen on a rules failure, and signing out

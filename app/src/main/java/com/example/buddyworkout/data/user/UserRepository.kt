@@ -41,13 +41,28 @@ interface UserRepository {
     suspend fun ensureProfile(name: String? = null, phone: String? = null): Result<Unit>
 
     /**
-     * Compresses the image at [uri], stores it at `users/{uid}/profile.jpg`,
-     * and patches the download URL onto the profile.
+     * Compresses the image at [uri] and stores it as a Firestore `Blob` at
+     * `users/{uid}/media/avatar`.
+     *
+     * Not Cloud Storage, which is the natural home for this: a new Firebase
+     * project needs the Blaze plan to get a bucket at all, and one 40KB avatar
+     * does not justify a billing card. The cost is a 1 MiB document ceiling and
+     * bandwidth on read; see the caller for the size guard.
      *
      * Registration does not fail when this does — a flaky connection should
      * cost the avatar, not the account.
      */
-    suspend fun uploadPhoto(uri: String): Result<String>
+    suspend fun saveAvatar(uri: String): Result<Unit>
+
+    /**
+     * The signed-in user's avatar as JPEG bytes, or null when there is none.
+     *
+     * Bytes rather than a URL is what lets an avatar render with no image
+     * loader in the project: they go straight to `BitmapFactory`.
+     *
+     * **Fails the flow** on a rejected listen, like [observeProfile].
+     */
+    fun observeAvatar(): Flow<ByteArray?>
 
     /**
      * The signed-in user's profile, or null while signed out.

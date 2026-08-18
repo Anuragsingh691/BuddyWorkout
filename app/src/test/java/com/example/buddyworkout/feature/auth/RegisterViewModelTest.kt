@@ -141,28 +141,28 @@ class RegisterViewModelTest {
             assertEquals("+91 98765 43210", users.lastPhone)
         }
 
-    @Test fun `a picked photo is uploaded after the account exists`() = runTest(dispatcher) {
+    @Test fun `a picked photo is saved after the account exists`() = runTest(dispatcher) {
         val vm = viewModel()
         vm.fillValidForm()
         vm.onPhotoSelected("content://media/picked/1")
         vm.onCreateAccount()
         testScheduler.advanceUntilIdle()
 
-        assertEquals(1, users.uploadCalls)
+        assertEquals(1, users.avatarCalls)
         assertEquals("content://media/picked/1", users.lastUri)
     }
 
-    @Test fun `no photo means no upload`() = runTest(dispatcher) {
+    @Test fun `no photo means nothing is written`() = runTest(dispatcher) {
         val vm = viewModel()
         vm.fillValidForm()
         vm.onCreateAccount()
         testScheduler.advanceUntilIdle()
 
-        assertEquals(0, users.uploadCalls)
+        assertEquals(0, users.avatarCalls)
     }
 
-    @Test fun `a failed photo upload still registers the account`() = runTest(dispatcher) {
-        users.uploadResult = Result.failure(IllegalStateException("network"))
+    @Test fun `a failed avatar write still registers the account`() = runTest(dispatcher) {
+        users.avatarResult = Result.failure(IllegalStateException("network"))
         val vm = viewModel()
         val events = mutableListOf<Unit>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.registered.collect { events += it } }
@@ -204,6 +204,6 @@ class RegisterViewModelTest {
             testScheduler.advanceUntilIdle()
 
             assertEquals(0, users.ensureCalls)
-            assertEquals(0, users.uploadCalls)
+            assertEquals(0, users.avatarCalls)
         }
 }

@@ -6,6 +6,22 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 
 /**
+ * `inSampleSize` for an image whose longest edge is [longestEdge], targeting
+ * [targetPx].
+ *
+ * Halves until the *next* halving would go under the target, so the decoded
+ * image is never smaller than asked for. BitmapFactory only honours powers of
+ * two, which is why this doubles rather than dividing to fit.
+ */
+fun sampleSizeFor(longestEdge: Int, targetPx: Int): Int {
+    if (longestEdge <= 0 || targetPx <= 0) return 1
+
+    var sample = 1
+    while (longestEdge / sample > targetPx * 2) sample *= 2
+    return sample
+}
+
+/**
  * Decodes [uri] downsampled so its longest edge is roughly [targetPx].
  *
  * A modern phone photo is several thousand pixels on a side; decoding one at
@@ -17,18 +33,23 @@ import android.net.Uri
  */
 fun decodeSampledBitmap(context: Context, uri: Uri, targetPx: Int): Bitmap? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    context.contentResolver.openInputStream(uri)?.use {
-        BitmapFactory.decodeStream(it, null, bounds)
-    } ?: return null
+    context.contentResolver.openInputStream(uri)?.use { stream ->
+        BitmapFactory.decodeStream(stream, null, bounds)
+    }
 
-    var sample = 1
-    val longest = maxOf(bounds.outWidth, bounds.outHeight)
-    // Halve until the next halving would go under the target, so the decoded
-    // image is always at least as large as asked for.
-    while (longest / sample > targetPx * 2) sample *= 2
+    // `outWidth` is the only signal that the first pass worked. A bounds-only
+    // decode returns null by contract, so testing its return value instead
+    // rejects every image, including the ones that read perfectly.
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
-    val options = BitmapFactory.Options().apply { inSampleSize = sample }
+    val options = BitmapFactory.Options().apply {
+        inSampleSize = sampleSizeFor(maxOf(bounds.outWidth, bounds.outHeight), targetPx)
+    }
     return context.contentResolver.openInputStream(uri)?.use { stream ->
         BitmapFactory.decodeStream(stream, null, options)
     }
 }
+
+/** Decodes stored avatar bytes. Returns null rather than throwing on junk. */
+fun decodeAvatar(bytes: ByteArray): Bitmap? =
+    runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }.getOrNull()

@@ -3,6 +3,8 @@ package com.example.buddyworkout.feature.profile
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.ui.graphics.asImageBitmap
+import com.example.buddyworkout.core.common.decodeAvatar
 import com.example.buddyworkout.core.ui.component.AvatarUi
 import com.example.buddyworkout.data.auth.AuthRepository
 import com.example.buddyworkout.data.auth.AuthUser
@@ -41,6 +43,14 @@ class ProfileViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            userRepository.observeAvatar()
+                .catch { Log.w(TAG, "Avatar listen failed", it) }
+                .collect { bytes ->
+                    val photo = bytes?.let { decodeAvatar(it)?.asImageBitmap() }
+                    _state.update { it.copy(avatar = it.avatar.copy(photo = photo)) }
+                }
+        }
+        viewModelScope.launch {
             userRepository.observeProfile()
                 // A rejected listen must not take the app down. Firestore
                 // delivers one whenever rules refuse the read — including on
@@ -76,15 +86,12 @@ class ProfileViewModel @Inject constructor(
 private fun ProfileUiState.merge(profile: UserProfile) = copy(
     name = profile.displayName.ifBlank { name },
     email = profile.email.ifBlank { email },
-    avatar = AvatarUi(
+    avatar = avatar.copy(
         initials = initialsOf(profile.displayName.ifBlank { name }),
         key = profile.uid,
     ),
     stats = listOf(
         StatUi("Phone", profile.phone ?: "Not set"),
-        // Stands in until avatars render remote images; without it the only
-        // proof the upload landed is the Firebase console.
-        StatUi("Profile photo", if (profile.photoUrl != null) "Uploaded" else "None"),
     ),
 )
 

@@ -1,24 +1,16 @@
 rules_version = '2';
 
-// Cloud Storage rules for buddyworkout-fb309.
+// Cloud Storage is not used by this app.
 //
-// Profile photos only. Workout video never reaches Storage by design — frames
-// are counted on-device and only the rep total is uploaded.
+// Avatars are Firestore Blobs at users/{uid}/media/avatar — a new Firebase
+// project needs the Blaze plan before it gets a Storage bucket at all, and one
+// 40KB avatar does not justify that. Workout video is never uploaded either,
+// by design: frames are counted on-device and only the rep total is stored.
+//
+// These rules stay deny-all so that if a bucket is ever provisioned, nothing
+// can quietly start writing to it without a deliberate change here.
 service firebase.storage {
   match /b/{bucket}/o {
-
-    match /users/{uid}/profile.jpg {
-      // Avatars are shown to buddies, so any signed-in user may read one.
-      allow read: if request.auth != null;
-
-      // Only the owner writes their own photo, and only a JPEG under 2 MB —
-      // the client compresses to ~512px, so a larger upload is not ours.
-      allow write: if request.auth != null
-                   && request.auth.uid == uid
-                   && request.resource.size < 2 * 1024 * 1024
-                   && request.resource.contentType.matches('image/jpe?g');
-    }
-
     match /{allPaths=**} {
       allow read, write: if false;
     }

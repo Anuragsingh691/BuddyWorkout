@@ -1,5 +1,6 @@
 package com.example.buddyworkout.feature.auth
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.buddyworkout.data.auth.AuthRepository
@@ -14,6 +15,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "RegisterViewModel"
 
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
@@ -51,10 +54,16 @@ class RegisterViewModel @Inject constructor(
                 .mapCatching { userRepository.ensureProfile(form.name, form.phone).getOrThrow() }
                 .fold(
                     onSuccess = {
-                        // Deliberately after the profile write and deliberately
-                        // ignored: a photo that fails to upload costs the
-                        // avatar, not the account.
-                        form.photoUri?.let { userRepository.uploadPhoto(it) }
+                        // After the profile write, and never fatal: a photo that
+                        // fails to upload costs the avatar, not the account. It
+                        // is logged rather than swallowed — silence is how a
+                        // decoder that returned null for every image went
+                        // unnoticed until someone tried it on a real phone.
+                        form.photoUri?.let { uri ->
+                            userRepository.saveAvatar(uri).onFailure { cause ->
+                                Log.w(TAG, "Avatar write failed", cause)
+                            }
+                        }
                         _state.update { it.copy(isLoading = false, error = null) }
                         _registered.send(Unit)
                     },

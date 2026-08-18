@@ -6,8 +6,8 @@ import android.net.Uri
 import com.example.buddyworkout.core.common.decodeSampledBitmap
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.Blob
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.storage.FirebaseStorage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -20,19 +20,30 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val USERS = "users"
-private const val PHOTO_PATH = "profile.jpg"
+private const val MEDIA = "media"
+private const val AVATAR = "avatar"
+private const val AVATAR_FIELD = "jpeg"
 
 /** Longest edge of the uploaded avatar, per `02-firebase-design.md` §6. */
 private const val PHOTO_MAX_PX = 512
 
 private const val PHOTO_QUALITY = 85
 
+/**
+ * Ceiling for the stored blob. A Firestore document may not exceed 1 MiB, and
+ * exceeding it is a hard rejection rather than a slow write, so the encoder
+ * steps quality down until it fits with room to spare.
+ */
+private const val AVATAR_MAX_BYTES = 300 * 1024
+
+/** Quality steps tried in order when the first encode comes out too large. */
+private val QUALITY_STEPS = listOf(PHOTO_QUALITY, 70, 55, 40)
+
 @Singleton
 class UserRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
-    private val storage: FirebaseStorage,
 ) : UserRepository {
 
     override suspend fun ensureProfile(name: String?, phone: String?): Result<Unit> = runCatching {
@@ -58,17 +69,38 @@ class UserRepositoryImpl @Inject constructor(
         ).await()
     }
 
-    override suspend fun uploadPhoto(uri: String): Result<String> = runCatching {
-        val uid = auth.currentUser?.uid ?: error("uploadPhoto called while signed out")
+    override suspend fun saveAvatar(uri: String): Result<Unit> = runCatching {
+        val uid = auth.currentUser?.uid ?: error("saveAvatar called while signed out")
         val bytes = withContext(Dispatchers.IO) { compress(Uri.parse(uri)) }
 
-        val reference = storage.reference.child("$USERS/$uid/$PHOTO_PATH")
-        reference.putBytes(bytes).await()
-        val url = reference.downloadUrl.await().toString()
-
-        firestore.collection(USERS).document(uid).update("photoUrl", url).await()
-        url
+        avatarDocument(uid).set(
+            mapOf(
+                AVATAR_FIELD to Blob.fromBytes(bytes),
+                "updatedAt" to FieldValue.serverTimestamp(),
+            )
+        ).await()
     }
+
+    override fun observeAvatar(): Flow<ByteArray?> = callbackFlow {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            trySend(null)
+            close()
+            return@callbackFlow
+        }
+
+        val registration = avatarDocument(uid).addSnapshotListener { snapshot, error ->
+            when {
+                error != null -> close(error)
+                snapshot == null || !snapshot.exists() -> trySend(null)
+                else -> trySend(snapshot.getBlob(AVATAR_FIELD)?.toBytes())
+            }
+        }
+        awaitClose { registration.remove() }
+    }
+
+    private fun avatarDocument(uid: String) =
+        firestore.collection(USERS).document(uid).collection(MEDIA).document(AVATAR)
 
     override fun observeProfile(): Flow<UserProfile?> = callbackFlow {
         val uid = auth.currentUser?.uid
@@ -91,7 +123,10 @@ class UserRepositoryImpl @Inject constructor(
         awaitClose { registration.remove() }
     }
 
-    /** Scales to [PHOTO_MAX_PX] and re-encodes as JPEG before upload. */
+    /**
+     * Scales to [PHOTO_MAX_PX] and encodes as JPEG, stepping quality down until
+     * the result fits [AVATAR_MAX_BYTES].
+     */
     private fun compress(uri: Uri): ByteArray {
         val decoded = decodeSampledBitmap(context, uri, PHOTO_MAX_PX)
             ?: error("Could not read the selected image")
@@ -111,10 +146,17 @@ class UserRepositoryImpl @Inject constructor(
             decoded
         }
 
-        return ByteArrayOutputStream().use { out ->
-            scaled.compress(Bitmap.CompressFormat.JPEG, PHOTO_QUALITY, out)
-            out.toByteArray()
+        var encoded = ByteArray(0)
+        for (quality in QUALITY_STEPS) {
+            encoded = ByteArrayOutputStream().use { out ->
+                scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)
+                out.toByteArray()
+            }
+            if (encoded.size <= AVATAR_MAX_BYTES) return encoded
         }
+        // Every step was still too large: a photo this dense at 512px is not
+        // realistic, and writing it would fail the document size limit.
+        error("Image is too large to store even at reduced quality")
     }
 }
 

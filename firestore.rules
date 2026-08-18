@@ -25,6 +25,40 @@ service cloud.firestore {
       match /buddies/{buddyUid} {
         allow read, write: if isSignedIn() && request.auth.uid == uid;
       }
+
+      // The avatar lives here as a Blob rather than in Cloud Storage, which a
+      // new project cannot provision without the Blaze plan. Readable by any
+      // signed-in user because buddy lists and leaderboards draw it; writable
+      // only by its owner, and capped well under the 1 MiB document limit.
+      match /media/{item} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn()
+                     && request.auth.uid == uid
+                     && request.resource.size() < 400 * 1024;
+      }
+    }
+
+    match /challenges/{challengeId} {
+      // Membership is the read gate, and it is checked against the document
+      // being read rather than with a get() — a lookup per document would
+      // bill a read for every row of every list.
+      allow read: if isSignedIn() && request.auth.uid in resource.data.memberUids;
+
+      // Writes arrive with the challenge write path. Creating and joining go
+      // through Cloud Functions, which bypass rules; leaving this closed means
+      // a tampered client cannot invent a challenge in the meantime.
+      allow write: if false;
+
+      match /participants/{uid} {
+        // A leaderboard row is readable by anyone who can read its challenge.
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
+
+      match /sessions/{sessionId} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
     }
 
     // Anything not named above is denied. Collections arriving with later
