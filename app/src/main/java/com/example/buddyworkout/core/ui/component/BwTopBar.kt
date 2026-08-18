@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -78,7 +79,10 @@ fun BwTopBar(
                 icon = BwIcons.ChevronLeft,
                 onClick = onBack,
                 contentDescription = "Back",
-                modifier = Modifier.padding(start = (-8).dp),
+                // offset, not padding: Compose rejects negative padding at
+                // measure time. The shift optically aligns the chevron with
+                // the 16dp gutter without changing the row's layout.
+                modifier = Modifier.offset(x = (-8).dp),
             )
         }
         Column(Modifier.weight(1f)) {

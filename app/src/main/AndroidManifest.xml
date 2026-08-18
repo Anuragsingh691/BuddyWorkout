@@ -18,12 +18,28 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:label="@string/app_name"
             android:theme="@style/Theme.BuddyWorkout">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Challenge invite App Links. autoVerify only takes effect once
+                 assetlinks.json is hosted at the domain; until then the filter
+                 still routes links opened explicitly (e.g. via adb). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="commworkout.app"
+                    android:pathPrefix="/c" />
             </intent-filter>
         </activity>
     </application>
