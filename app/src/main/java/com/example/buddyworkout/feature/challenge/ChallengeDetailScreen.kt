@@ -2,15 +2,22 @@ package com.example.buddyworkout.feature.challenge
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -40,9 +47,15 @@ fun ChallengeDetailScreen(
     onRecordWorkout: () -> Unit,
     onSeeWinner: () -> Unit,
     onCancelChallenge: () -> Unit,
-    onMore: () -> Unit = {},
+    onShareLink: () -> Unit = {},
+    onOpenAddBuddy: () -> Unit = {},
+    onAddBuddyEmailChange: (String) -> Unit = {},
+    onSearchBuddy: () -> Unit = {},
+    onConfirmAddBuddy: () -> Unit = {},
+    onDismissAddBuddy: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -52,12 +65,43 @@ fun ChallengeDetailScreen(
             title = state.title,
             onBack = onBack,
             actions = {
-                BwIconButton(
-                    icon = BwIcons.MoreVertical,
-                    onClick = onMore,
-                    contentDescription = "More",
-                )
+                // The export draws the overflow button but never says what is
+                // in it. Growing the challenge is the only action that has no
+                // other home, so it lives here.
+                Box {
+                    BwIconButton(
+                        icon = BwIcons.MoreVertical,
+                        onClick = { menuOpen = true },
+                        contentDescription = "More",
+                    )
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Add by email") },
+                            enabled = state.canAddBuddies,
+                            onClick = {
+                                menuOpen = false
+                                onOpenAddBuddy()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Share invite link") },
+                            enabled = state.canAddBuddies,
+                            onClick = {
+                                menuOpen = false
+                                onShareLink()
+                            },
+                        )
+                    }
+                }
             },
+        )
+
+        AddBuddyDialog(
+            state = state.addBuddy,
+            onEmailChange = onAddBuddyEmailChange,
+            onSearch = onSearchBuddy,
+            onConfirm = onConfirmAddBuddy,
+            onDismiss = onDismissAddBuddy,
         )
 
         LazyColumn(

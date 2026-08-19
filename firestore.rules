@@ -56,26 +56,70 @@ service cloud.firestore {
                     && request.resource.data.status == 'active'
                     && !('winnerUid' in request.resource.data);
 
-      // Only the creator ends a challenge, and only by cancelling it. Reaching
-      // 'completed' is the deadline's job, never a client's, so that no member
-      // can declare an early win.
-      allow update: if isSignedIn()
-                    && request.auth.uid == resource.data.creatorUid
-                    && request.resource.data.status == 'cancelled'
-                    && request.resource.data.diff(resource.data)
-                         .affectedKeys().hasOnly(['status']);
+      // Two shapes of update are allowed and nothing else.
+      //
+      // Cancelling: the creator only, setting status to exactly 'cancelled'
+      // and touching nothing else. Reaching 'completed' is the deadline's job,
+      // never a client's, so no member can declare an early win.
+      //
+      // Joining: anyone with the link may add themselves and only themselves.
+      // Stated as "the new list contains all of the old one, is exactly one
+      // longer, and includes me" so it holds regardless of array ordering.
+      allow update: if isSignedIn() && (isCancelling() || isJoining() || isAdding());
+
+      function isCancelling() {
+        return request.auth.uid == resource.data.creatorUid
+               && request.resource.data.status == 'cancelled'
+               && request.resource.data.diff(resource.data)
+                    .affectedKeys().hasOnly(['status']);
+      }
+
+      // The creator adding someone else. Same shape as joining, but the added
+      // uid is not the writer's. Their own two-challenge limit cannot be
+      // checked here — reading another user's challenges is exactly what the
+      // `list` rule forbids — so manual add can push someone to three. One
+      // more thing the Cloud Function would have done server-side.
+      function isAdding() {
+        return request.auth.uid == resource.data.creatorUid
+               && request.resource.data.memberUids.hasAll(resource.data.memberUids)
+               && request.resource.data.memberUids.size() == resource.data.memberUids.size() + 1
+               && request.resource.data.memberUids.size() <= 4
+               && request.resource.data.status == resource.data.status
+               && request.resource.data.diff(resource.data)
+                    .affectedKeys().hasOnly(['memberUids', 'memberCount']);
+      }
+
+      function isJoining() {
+        return !(request.auth.uid in resource.data.memberUids)
+               && request.auth.uid in request.resource.data.memberUids
+               && request.resource.data.memberUids.hasAll(resource.data.memberUids)
+               && request.resource.data.memberUids.size() == resource.data.memberUids.size() + 1
+               && request.resource.data.memberUids.size() <= 4
+               && request.resource.data.status == resource.data.status
+               && request.resource.data.diff(resource.data)
+                    .affectedKeys().hasOnly(['memberUids', 'memberCount']);
+      }
 
       allow delete: if false;
 
       match /participants/{uid} {
         allow read: if isSignedIn();
-        // You may only create your own row, and only with a zero count — reps
-        // are earned, not declared.
+
+        // Your own row, or one the creator seeds for someone they added — so
+        // an added member appears on the leaderboard immediately instead of
+        // being in memberUids with no entry. Either way the count starts at
+        // zero: reps are earned, not declared.
         allow create: if isSignedIn()
-                      && request.auth.uid == uid
-                      && request.resource.data.totalReps == 0;
+                      && request.resource.data.totalReps == 0
+                      && (request.auth.uid == uid || isCreatorOfChallenge(challengeId));
+
         allow update: if false;
         allow delete: if false;
+      }
+
+      function isCreatorOfChallenge(cid) {
+        return request.auth.uid ==
+          get(/databases/$(database)/documents/challenges/$(cid)).data.creatorUid;
       }
 
       match /sessions/{sessionId} {

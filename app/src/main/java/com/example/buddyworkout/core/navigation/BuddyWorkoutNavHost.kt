@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -38,7 +39,7 @@ import com.example.buddyworkout.feature.challenge.create.MAX_BUDDIES
 import com.example.buddyworkout.feature.challenge.create.DateTimeMode
 import com.example.buddyworkout.feature.challenge.create.DateTimePickerScreen
 import com.example.buddyworkout.feature.home.HomeRoute
-import com.example.buddyworkout.feature.invite.ChallengeInviteScreen
+import com.example.buddyworkout.feature.invite.ChallengeInviteRoute
 import com.example.buddyworkout.feature.invite.InviteScreen
 import com.example.buddyworkout.feature.profile.ProfileRoute
 import com.example.buddyworkout.feature.record.RecordScreen
@@ -148,7 +149,12 @@ fun BuddyWorkoutNavHost(
             }
             scrimmed<ChallengeDetail>(motion) { entry ->
                 val route = entry.toRoute<ChallengeDetail>()
+                val context = LocalContext.current
                 ChallengeDetailRoute(
+                    // Sharing needs a Context, so the intent is built here
+                    // rather than in the ViewModel — the same reason the photo
+                    // picker and the Google token request live at call sites.
+                    onShareLink = { context.shareChallenge(route.id) },
                     onBack = { navController.popBackStack() },
                     onRecordWorkout = { navController.navigate(Record(route.id)) },
                     onSeeWinner = { navController.navigate(Winner(route.id)) },
@@ -158,12 +164,10 @@ fun BuddyWorkoutNavHost(
             scrimmed<ChallengeInvite>(
                 motion = motion,
                 deepLinks = listOf(navDeepLink<ChallengeInvite>(basePath = INVITE_BASE_PATH)),
-            ) { entry ->
-                val route = entry.toRoute<ChallengeInvite>()
-                ChallengeInviteScreen(
-                    state = PreviewData.challengeInvite,
-                    onAccept = {
-                        navController.navigate(ChallengeDetail(route.code)) { popUpTo(0) }
+            ) {
+                ChallengeInviteRoute(
+                    onJoined = { id ->
+                        navController.navigate(ChallengeDetail(id)) { popUpTo(0) }
                     },
                     onDecline = { navController.navigate(Home) { popUpTo(0) } },
                 )
@@ -285,4 +289,21 @@ private fun createViewModel(
 ): CreateChallengeViewModel {
     val graphEntry = remember(entry) { navController.getBackStackEntry(CreateGraph) }
     return hiltViewModel(graphEntry)
+}
+
+/**
+ * Opens the system share sheet with a link to [challengeId].
+ *
+ * The link is the challenge's own id: there is no separate invite code, and the
+ * id is unguessable, which is what the `get` rule relies on.
+ */
+private fun android.content.Context.shareChallenge(challengeId: String) {
+    val share = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(
+            Intent.EXTRA_TEXT,
+            "Join my pushup challenge: $INVITE_BASE_PATH/$challengeId",
+        )
+    }
+    startActivity(Intent.createChooser(share, null))
 }

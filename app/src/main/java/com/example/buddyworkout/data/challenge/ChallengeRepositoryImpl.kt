@@ -79,16 +79,7 @@ class ChallengeRepositoryImpl @Inject constructor(
         busy.trackCatching {
             val user = auth.currentUser ?: error("createChallenge called while signed out")
 
-            // Counted from the live list rather than a stored counter: closing
-            // a challenge would have to decrement every member's counter, and
-            // rules do not let one user write another's document. Restore the
-            // counter if Cloud Functions ever land.
-            val active = firestore.collection(CHALLENGES)
-                .whereArrayContains("memberUids", user.uid)
-                .get().await()
-                .documents.map { it.toChallenge() }
-                .count { !it.status.isOver && it.endAtMillis > System.currentTimeMillis() }
-            if (active >= MAX_ACTIVE_CHALLENGES) throw ChallengeLimitReached()
+            if (activeChallengeCount(user.uid) >= MAX_ACTIVE_CHALLENGES) throw ChallengeLimitReached()
 
             val challenge = firestore.collection(CHALLENGES).document()
             val participant = challenge.collection(PARTICIPANTS).document(user.uid)
@@ -124,12 +115,107 @@ class ChallengeRepositoryImpl @Inject constructor(
             challenge.id
         }
 
+    override suspend fun joinChallenge(challengeId: String): Result<Unit> =
+        busy.trackCatching {
+            val user = auth.currentUser ?: error("joinChallenge called while signed out")
+            if (activeChallengeCount(user.uid) >= MAX_ACTIVE_CHALLENGES) throw ChallengeLimitReached()
+
+            val challenge = firestore.collection(CHALLENGES).document(challengeId)
+
+            // A transaction, unlike create: the member cap has to be checked
+            // against the document as it is at write time, or two people
+            // accepting at once could both pass a stale check.
+            firestore.runTransaction { transaction ->
+                val snapshot = transaction.get(challenge)
+                if (!snapshot.exists()) throw ChallengeOver()
+
+                val current = snapshot.toChallenge()
+                if (user.uid in current.memberUids) throw AlreadyJoined()
+                if (current.status.isOver || current.endAtMillis <= System.currentTimeMillis()) {
+                    throw ChallengeOver()
+                }
+                if (current.memberUids.size >= MAX_MEMBERS) throw ChallengeFull()
+
+                transaction.update(
+                    challenge,
+                    mapOf(
+                        "memberUids" to FieldValue.arrayUnion(user.uid),
+                        "memberCount" to current.memberUids.size + 1,
+                    ),
+                )
+                transaction.set(
+                    challenge.collection(PARTICIPANTS).document(user.uid),
+                    mapOf(
+                        "displayName" to user.displayName.orEmpty(),
+                        "photoUrl" to user.photoUrl?.toString(),
+                        "totalReps" to 0,
+                        "joinedAt" to FieldValue.serverTimestamp(),
+                    ),
+                )
+            }.await()
+            Unit
+        }
+
+    override suspend fun addMember(challengeId: String, person: NewMember): Result<Unit> =
+        busy.trackCatching {
+            val challenge = firestore.collection(CHALLENGES).document(challengeId)
+
+            firestore.runTransaction { transaction ->
+                val snapshot = transaction.get(challenge)
+                if (!snapshot.exists()) throw ChallengeOver()
+
+                val current = snapshot.toChallenge()
+                if (person.uid in current.memberUids) throw AlreadyJoined()
+                if (current.status.isOver || current.endAtMillis <= System.currentTimeMillis()) {
+                    throw ChallengeOver()
+                }
+                if (current.memberUids.size >= MAX_MEMBERS) throw ChallengeFull()
+
+                transaction.update(
+                    challenge,
+                    mapOf(
+                        "memberUids" to FieldValue.arrayUnion(person.uid),
+                        "memberCount" to current.memberUids.size + 1,
+                    ),
+                )
+                // The creator seeds the row so the person shows on the
+                // leaderboard immediately rather than being a member with no
+                // entry until they next open the app.
+                transaction.set(
+                    challenge.collection(PARTICIPANTS).document(person.uid),
+                    mapOf(
+                        "displayName" to person.displayName,
+                        "photoUrl" to person.photoUrl,
+                        "totalReps" to 0,
+                        "joinedAt" to FieldValue.serverTimestamp(),
+                    ),
+                )
+            }.await()
+            Unit
+        }
+
     override suspend fun cancelChallenge(challengeId: String): Result<Unit> =
         busy.trackCatching {
             firestore.collection(CHALLENGES).document(challengeId)
                 .update("status", "cancelled")
                 .await()
         }
+
+    /**
+     * Counted from the live list rather than a stored counter: closing a
+     * challenge would have to decrement every member's counter, and rules do
+     * not let one user write another's document. Restore the counter if Cloud
+     * Functions ever land.
+     *
+     * A challenge past its deadline does not count, even while its stored
+     * status still says active — nothing closes it until someone opens it.
+     */
+    private suspend fun activeChallengeCount(uid: String): Int =
+        firestore.collection(CHALLENGES)
+            .whereArrayContains("memberUids", uid)
+            .get().await()
+            .documents.map { it.toChallenge() }
+            .count { !it.status.isOver && it.endAtMillis > System.currentTimeMillis() }
 
     private fun withParticipants(challenge: Challenge): Flow<ChallengeWithParticipants> =
         participantsOf(challenge.id).map { ChallengeWithParticipants(challenge, it) }

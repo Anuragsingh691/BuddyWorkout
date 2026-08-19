@@ -62,7 +62,7 @@ class UserRepositoryImpl @Inject constructor(
                 // sign-in, where there is no form.
                 "displayName" to (name?.trim()?.takeIf { it.isNotBlank() }
                     ?: user.displayName.orEmpty()),
-                "email" to user.email.orEmpty(),
+                "email" to user.email.orEmpty().lowercase(),
                 "phone" to phone?.trim()?.takeIf { it.isNotBlank() },
                 // Google hands us an avatar already; a photo picked during
                 // registration overwrites it a moment later.
@@ -83,6 +83,18 @@ class UserRepositoryImpl @Inject constructor(
                 "updatedAt" to FieldValue.serverTimestamp(),
             )
         ).await()
+    }
+
+    override suspend fun findByEmail(email: String): Result<UserProfile?> = busy.trackCatching {
+        val normalised = email.trim().lowercase()
+        if (normalised.isBlank()) return@trackCatching null
+
+        firestore.collection(USERS)
+            .whereEqualTo("email", normalised)
+            .limit(1)
+            .get().await()
+            .documents.firstOrNull()
+            ?.let { it.toProfile(it.id) }
     }
 
     override fun observeAvatar(): Flow<ByteArray?> = callbackFlow {

@@ -13,6 +13,7 @@ fun ChallengeDetailRoute(
     onRecordWorkout: () -> Unit,
     onSeeWinner: () -> Unit,
     onCancelled: () -> Unit,
+    onShareLink: () -> Unit,
     viewModel: ChallengeDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -27,5 +28,11 @@ fun ChallengeDetailRoute(
         onRecordWorkout = onRecordWorkout,
         onSeeWinner = onSeeWinner,
         onCancelChallenge = viewModel::onCancelChallenge,
+        onShareLink = onShareLink,
+        onOpenAddBuddy = viewModel::onOpenAddBuddy,
+        onAddBuddyEmailChange = viewModel::onAddBuddyEmailChange,
+        onSearchBuddy = viewModel::onSearchBuddy,
+        onConfirmAddBuddy = viewModel::onConfirmAddBuddy,
+        onDismissAddBuddy = viewModel::onDismissAddBuddy,
     )
 }

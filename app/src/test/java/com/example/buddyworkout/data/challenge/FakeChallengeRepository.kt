@@ -14,6 +14,14 @@ class FakeChallengeRepository : ChallengeRepository {
     var lastWindow: ChallengeWindow? = null
     var createResult: Result<String> = Result.success("new-id")
 
+    var joinCalls: Int = 0
+    var lastJoinedId: String? = null
+    var joinResult: Result<Unit> = Result.success(Unit)
+
+    var addCalls: Int = 0
+    var lastAdded: NewMember? = null
+    var addResult: Result<Unit> = Result.success(Unit)
+
     var cancelCalls: Int = 0
     var lastCancelledId: String? = null
     var cancelResult: Result<Unit> = Result.success(Unit)
@@ -26,6 +34,18 @@ class FakeChallengeRepository : ChallengeRepository {
         createCalls++
         lastWindow = window
         return createResult
+    }
+
+    override suspend fun joinChallenge(challengeId: String): Result<Unit> {
+        joinCalls++
+        lastJoinedId = challengeId
+        return joinResult
+    }
+
+    override suspend fun addMember(challengeId: String, person: NewMember): Result<Unit> {
+        addCalls++
+        lastAdded = person
+        return addResult
     }
 
     override suspend fun cancelChallenge(challengeId: String): Result<Unit> {

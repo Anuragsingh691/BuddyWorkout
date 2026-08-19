@@ -55,6 +55,16 @@ interface UserRepository {
     suspend fun saveAvatar(uri: String): Result<Unit>
 
     /**
+     * Looks a person up by the email they signed up with, or null if nobody
+     * matches.
+     *
+     * Relies on profiles being readable by any signed-in user, which is what
+     * `firestore.rules` allows so that buddy lists and leaderboards can render
+     * other people. Matching is case-insensitive on a trimmed address.
+     */
+    suspend fun findByEmail(email: String): Result<UserProfile?>
+
+    /**
      * The signed-in user's avatar as JPEG bytes, or null when there is none.
      *
      * Bytes rather than a URL is what lets an avatar render with no image

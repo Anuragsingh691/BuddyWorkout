@@ -35,6 +35,16 @@ class FakeUserRepository : UserRepository {
         return avatarResult
     }
 
+    var lookupCalls: Int = 0
+    var lastLookupEmail: String? = null
+    var lookupResult: Result<UserProfile?> = Result.success(null)
+
+    override suspend fun findByEmail(email: String): Result<UserProfile?> {
+        lookupCalls++
+        lastLookupEmail = email
+        return lookupResult
+    }
+
     val avatar = MutableStateFlow<ByteArray?>(null)
 
     override fun observeAvatar(): Flow<ByteArray?> = avatar

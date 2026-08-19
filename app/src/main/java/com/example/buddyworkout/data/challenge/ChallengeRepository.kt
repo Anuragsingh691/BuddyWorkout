@@ -40,14 +40,48 @@ interface ChallengeRepository {
     suspend fun createChallenge(window: ChallengeWindow): Result<String>
 
     /**
+     * Adds the signed-in user to a challenge they have the link to.
+     *
+     * Fails with [ChallengeFull] at the member cap, [AlreadyJoined] if they are
+     * already in, [ChallengeOver] once it has ended, and
+     * [ChallengeLimitReached] when they are at their own limit.
+     */
+    suspend fun joinChallenge(challengeId: String): Result<Unit>
+
+    /**
+     * Adds someone else to a challenge. Creator only, which rules enforce.
+     *
+     * Unlike joining, the added person does not consent and their own
+     * two-challenge limit cannot be checked: reading another user's challenges
+     * is exactly what the `list` rule forbids. Another consequence of having
+     * no Cloud Function to do this server-side.
+     */
+    suspend fun addMember(challengeId: String, person: NewMember): Result<Unit>
+
+    /**
      * Voids a challenge: no winner, and it stops occupying a slot for every
      * member. Creator only, which rules enforce.
      */
     suspend fun cancelChallenge(challengeId: String): Result<Unit>
 }
 
-/** The creator is already in as many challenges as the rules allow. */
+/** Enough of someone's profile to seed their leaderboard row. */
+data class NewMember(val uid: String, val displayName: String, val photoUrl: String?)
+
+/** The user is already in as many challenges as the rules allow. */
 class ChallengeLimitReached : Exception("Already in the maximum number of challenges")
+
+/** The challenge already holds [MAX_MEMBERS]. */
+class ChallengeFull : Exception("Challenge is full")
+
+/** The user is already a member — the invite screen should not have offered. */
+class AlreadyJoined : Exception("Already a member")
+
+/** Cancelled, completed, or past its deadline. */
+class ChallengeOver : Exception("Challenge has ended")
+
+/** A challenge holds 2-4 people including its creator. */
+const val MAX_MEMBERS = 4
 
 /** A challenge holds 2-4 members and a person may be in two at once. */
 const val MAX_ACTIVE_CHALLENGES = 2
