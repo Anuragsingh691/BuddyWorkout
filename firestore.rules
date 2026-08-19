@@ -1,0 +1,137 @@
+rules_version = '2';
+
+// Firestore security rules for buddyworkout-fb309.
+//
+// Scope: the `users/{uid}` document only. The challenge, participant and
+// session rules sketched in docs/architecture/02-firebase-design.md §7 land
+// with the challenge slice — writing them now would be untested guesswork
+// against collections nothing reads or writes yet.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    match /users/{uid} {
+      // Buddy lists and leaderboards show other people's names and avatars, so
+      // a profile is readable by any signed-in user — never publicly.
+      allow read: if isSignedIn();
+
+      // Only the owner writes their own profile. `activeChallengeCount` becomes
+      // server-only once Functions maintain it; today nothing increments it.
+      allow write: if isSignedIn() && request.auth.uid == uid;
+
+      match /buddies/{buddyUid} {
+        allow read, write: if isSignedIn() && request.auth.uid == uid;
+      }
+
+      // The avatar lives here as a Blob rather than in Cloud Storage, which a
+      // new project cannot provision without the Blaze plan. Readable by any
+      // signed-in user because buddy lists and leaderboards draw it; writable
+      // only by its owner, and capped well under the 1 MiB document limit.
+      match /media/{item} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn()
+                     && request.auth.uid == uid
+                     && request.resource.size() < 400 * 1024;
+      }
+    }
+
+    match /challenges/{challengeId} {
+      // `get` and `list` are separated on purpose. Knowing an unguessable id
+      // is what an invite link gives you, so a single document is readable by
+      // any signed-in user — but queries only ever return your own challenges,
+      // so nobody can enumerate ones they are not in.
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && request.auth.uid in resource.data.memberUids;
+
+      // A challenge is created containing only its creator; members arrive by
+      // opening the link. The 2-active limit is NOT enforced here — that was
+      // the job of the Cloud Function this build does without, so it is
+      // client-trusted (`02-firebase-design.md` §5, Spark fallback).
+      allow create: if isSignedIn()
+                    && request.resource.data.creatorUid == request.auth.uid
+                    && request.resource.data.memberUids == [request.auth.uid]
+                    && request.resource.data.status == 'active'
+                    && !('winnerUid' in request.resource.data);
+
+      // Two shapes of update are allowed and nothing else.
+      //
+      // Cancelling: the creator only, setting status to exactly 'cancelled'
+      // and touching nothing else. Reaching 'completed' is the deadline's job,
+      // never a client's, so no member can declare an early win.
+      //
+      // Joining: anyone with the link may add themselves and only themselves.
+      // Stated as "the new list contains all of the old one, is exactly one
+      // longer, and includes me" so it holds regardless of array ordering.
+      allow update: if isSignedIn() && (isCancelling() || isJoining() || isAdding());
+
+      function isCancelling() {
+        return request.auth.uid == resource.data.creatorUid
+               && request.resource.data.status == 'cancelled'
+               && request.resource.data.diff(resource.data)
+                    .affectedKeys().hasOnly(['status']);
+      }
+
+      // The creator adding someone else. Same shape as joining, but the added
+      // uid is not the writer's. Their own two-challenge limit cannot be
+      // checked here — reading another user's challenges is exactly what the
+      // `list` rule forbids — so manual add can push someone to three. One
+      // more thing the Cloud Function would have done server-side.
+      function isAdding() {
+        return request.auth.uid == resource.data.creatorUid
+               && request.resource.data.memberUids.hasAll(resource.data.memberUids)
+               && request.resource.data.memberUids.size() == resource.data.memberUids.size() + 1
+               && request.resource.data.memberUids.size() <= 4
+               && request.resource.data.status == resource.data.status
+               && request.resource.data.diff(resource.data)
+                    .affectedKeys().hasOnly(['memberUids', 'memberCount']);
+      }
+
+      function isJoining() {
+        return !(request.auth.uid in resource.data.memberUids)
+               && request.auth.uid in request.resource.data.memberUids
+               && request.resource.data.memberUids.hasAll(resource.data.memberUids)
+               && request.resource.data.memberUids.size() == resource.data.memberUids.size() + 1
+               && request.resource.data.memberUids.size() <= 4
+               && request.resource.data.status == resource.data.status
+               && request.resource.data.diff(resource.data)
+                    .affectedKeys().hasOnly(['memberUids', 'memberCount']);
+      }
+
+      allow delete: if false;
+
+      match /participants/{uid} {
+        allow read: if isSignedIn();
+
+        // Your own row, or one the creator seeds for someone they added — so
+        // an added member appears on the leaderboard immediately instead of
+        // being in memberUids with no entry. Either way the count starts at
+        // zero: reps are earned, not declared.
+        allow create: if isSignedIn()
+                      && request.resource.data.totalReps == 0
+                      && (request.auth.uid == uid || isCreatorOfChallenge(challengeId));
+
+        allow update: if false;
+        allow delete: if false;
+      }
+
+      function isCreatorOfChallenge(cid) {
+        return request.auth.uid ==
+          get(/databases/$(database)/documents/challenges/$(cid)).data.creatorUid;
+      }
+
+      match /sessions/{sessionId} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
+    }
+
+    // Anything not named above is denied. Collections arriving with later
+    // slices must add their own rules rather than rely on a default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

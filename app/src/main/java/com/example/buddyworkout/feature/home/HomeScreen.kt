@@ -14,16 +14,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.buddyworkout.core.ui.component.ActionTile
-import com.example.buddyworkout.core.ui.component.AvatarStack
+import com.example.buddyworkout.core.ui.component.Avatar
 import com.example.buddyworkout.core.ui.component.BwIconButton
 import com.example.buddyworkout.core.ui.component.BwTopBar
 import com.example.buddyworkout.core.ui.component.ChallengeCard
-import com.example.buddyworkout.core.ui.component.NoticeCard
 import com.example.buddyworkout.core.ui.component.SectionTitle
 import com.example.buddyworkout.core.ui.icon.BwIcons
 import com.example.buddyworkout.core.ui.preview.PreviewData
 import com.example.buddyworkout.core.ui.theme.BuddyWorkoutTheme
 import com.example.buddyworkout.core.ui.theme.BwColors
+import com.example.buddyworkout.core.ui.theme.BwSize
 import com.example.buddyworkout.core.ui.theme.BwSpace
 
 @Composable
@@ -41,60 +41,44 @@ fun HomeScreen(
             .background(BwColors.Bg),
     ) {
         BwTopBar(
-            title = "BuddyWorkout",
+            title = state.greeting,
+            overline = state.overline,
             actions = {
                 BwIconButton(
                     icon = BwIcons.Bell,
                     onClick = onNotifications,
                     contentDescription = "Notifications",
                 )
+                state.avatar?.let { Avatar(it, size = BwSize.IconButton) }
             },
         )
-
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(BwSpace.Gutter),
             verticalArrangement = Arrangement.spacedBy(BwSpace.Md),
         ) {
             item {
-                Text(
-                    text = state.greeting,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = BwColors.Ink,
-                )
-            }
-
-            item {
+                // Invite leads and takes the solid tile: the export puts growing
+                // the buddy list ahead of starting another challenge.
                 Row(horizontalArrangement = Arrangement.spacedBy(BwSpace.Md)) {
-                    ActionTile(
-                        title = "Create challenge",
-                        description = "Pick buddies and a deadline",
-                        icon = BwIcons.Plus,
-                        onClick = onCreateChallenge,
-                        modifier = Modifier.weight(1f),
-                    )
                     ActionTile(
                         title = "Invite buddies",
                         description = "Share your invite link",
                         icon = BwIcons.PersonAdd,
                         onClick = onInviteBuddies,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ActionTile(
+                        title = "Create challenge",
+                        description = "Pick buddies and a deadline",
+                        icon = BwIcons.Plus,
+                        onClick = onCreateChallenge,
                         filled = false,
                         modifier = Modifier.weight(1f),
                     )
                 }
             }
-
-            if (state.atChallengeLimit) {
-                item {
-                    NoticeCard(
-                        text = "You're in 2 active challenges — the maximum. Finish or cancel one to start another.",
-                        icon = BwIcons.Info,
-                    )
-                }
-            }
-
-            item { SectionTitle(text = "Active challenges", hint = state.slotsLabel) }
-
+            item { SectionTitle(text = "Active challenges", hint = "· tap to open →") }
             if (state.activeChallenges.isEmpty()) {
                 item {
                     Text(
@@ -110,9 +94,11 @@ fun HomeScreen(
                         title = challenge.title,
                         summary = challenge.summary,
                         progress = challenge.progress,
-                        stat = challenge.stat,
+                        // The export prints the standing alongside the count
+                        // here, and as a pill on the Challenges tab.
+                        stat = listOfNotNull(challenge.stat, challenge.rankLabel).joinToString(" · "),
+                        accent = if (challenge.isLeading) BwColors.Primary else BwColors.Amber,
                         onClick = { onChallengeClick(challenge.id) },
-                        trailing = { AvatarStack(avatars = challenge.members) },
                     )
                 }
             }
@@ -129,5 +115,5 @@ private fun HomeScreenPreview() = BuddyWorkoutTheme {
 @Preview(showBackground = true, widthDp = 380, heightDp = 800)
 @Composable
 private fun HomeScreenEmptyPreview() = BuddyWorkoutTheme {
-    HomeScreen(PreviewData.home.copy(activeChallenges = emptyList(), atChallengeLimit = false), {}, {}, {}, {})
+    HomeScreen(PreviewData.home.copy(activeChallenges = emptyList()), {}, {}, {}, {})
 }

@@ -1,5 +1,6 @@
 package com.example.buddyworkout.core.ui.preview
 
+import com.example.buddyworkout.core.common.CalendarMonth
 import com.example.buddyworkout.core.ui.component.AvatarUi
 import com.example.buddyworkout.core.ui.model.BuddyUi
 import com.example.buddyworkout.core.ui.model.ChallengeUi
@@ -40,20 +41,22 @@ object PreviewData {
         ChallengeUi(
             id = "c1",
             title = "Pushup challenge",
-            summary = "4 buddies · 2d 14h left",
-            progress = 0.62f,
+            summary = "with Rohit, Priya +2 · ends in 3 days",
+            progress = 0.64f,
             stat = "128 reps",
             members = people,
-            remaining = "2d 14h left",
+            remaining = "3 days left",
+            rank = 1,
         ),
         ChallengeUi(
             id = "c2",
             title = "Pushup challenge",
-            summary = "2 buddies · 5h 40m left",
-            progress = 0.88f,
-            stat = "64 reps",
+            summary = "with Sahil, Neha +1 · ends in 6 days",
+            progress = 0.38f,
+            stat = "42 reps",
             members = people.take(2),
-            remaining = "5h 40m left",
+            remaining = "6 days left",
+            rank = 2,
         ),
     )
 
@@ -71,30 +74,35 @@ object PreviewData {
     )
 
     val leaderboard = listOf(
-        ParticipantUi("u1", "Rahul K.", people[0], rank = 1, reps = "204 reps", subtitle = "Avg form 94%"),
-        ParticipantUi("u2", "Priya M.", people[1], rank = 2, reps = "186 reps", subtitle = "Avg form 91%"),
-        ParticipantUi("u4", "You", me, rank = 3, reps = "128 reps", subtitle = "Avg form 88%", isMe = true),
-        ParticipantUi("u3", "Sameer V.", people[2], rank = 4, reps = "96 reps", subtitle = "Avg form 85%"),
+        ParticipantUi("u4", "You", me, rank = 1, reps = "128", subtitle = "Active now", isMe = true),
+        ParticipantUi("u1", "Rohit Kumar", people[0], rank = 2, reps = "119", subtitle = "2 min ago"),
+        ParticipantUi("u2", "Priya Mehta", people[1], rank = 3, reps = "64", subtitle = "18 min ago"),
+        ParticipantUi("u3", "Sahil Verma", people[2], rank = 4, reps = "40", subtitle = "1 hr ago"),
     )
 
     val buddies = listOf(
-        BuddyUi("u1", "Rahul K.", people[0], subtitle = "In 1 active challenge", selected = true),
-        BuddyUi("u2", "Priya M.", people[1], subtitle = "Free", selected = true),
-        BuddyUi("u3", "Sameer V.", people[2], subtitle = "In 2 active challenges"),
+        BuddyUi("u1", "Rohit Kumar", AvatarUi("RK", color = avatarColorFor("RK")), selected = true),
+        BuddyUi("u2", "Priya Mehta", AvatarUi("PM", color = avatarColorFor("PM")), selected = true),
+        BuddyUi("u3", "Sahil Verma", AvatarUi("SV", color = avatarColorFor("SV"))),
+        BuddyUi("u4", "Neha Arora", AvatarUi("NA", color = avatarColorFor("NA"))),
+        BuddyUi("u5", "Aman Gupta", AvatarUi("AG", color = avatarColorFor("AG"))),
+        BuddyUi("u6", "Karan Singh", AvatarUi("KS", color = avatarColorFor("KS"))),
+        BuddyUi("u7", "Divya Rao", AvatarUi("DR", color = avatarColorFor("DR"))),
+        BuddyUi("u8", "Meera Nair", AvatarUi("MN", color = avatarColorFor("MN"))),
     )
 
     val login = LoginUiState(email = "anurag@example.com", password = "secret123")
 
     val register = RegisterUiState(
-        name = "Anurag S.",
+        name = "Anurag Shishodia",
         email = "anurag@example.com",
         password = "secret123",
     )
 
     val home = HomeUiState(
-        greeting = "Hey, Anurag",
+        greeting = "Hi, Anurag 👋",
+        avatar = me,
         activeChallenges = challenges,
-        atChallengeLimit = true,
     )
 
     val profile = ProfileUiState(
@@ -112,9 +120,7 @@ object PreviewData {
     val challengesTab = ChallengesUiState(active = challenges, completed = completedChallenges)
 
     val challengeDetail = ChallengeDetailUiState(
-        remaining = "2d 14h left",
-        startsAt = "Mon 18 Aug, 06:00",
-        endsAt = "Wed 20 Aug, 06:00",
+        remaining = "02:14:53",
         members = people,
         leaderboard = leaderboard,
         isCreator = true,
@@ -122,44 +128,69 @@ object PreviewData {
 
     val createChallenge = CreateChallengeUiState(
         selectedBuddies = buddies.filter { it.selected },
-        startLabel = "Now",
-        endLabel = "Wed 20 Aug, 06:00",
-        durationLabel = "2 days",
+        limitNotice = "Group pushup challenge · you have 1 of 2 active",
+        selectedDurationIndex = 1,
+        startLabel = "17 Jun · 6:00 PM",
+        endLabel = "18 Jun · 6:00 AM",
+        durationLabel = "12-hour challenge",
     )
 
     val buddyPicker = BuddyPickerUiState(buddies = buddies)
 
     val dateTimePicker = DateTimePickerUiState(
-        presets = listOf("6 hours", "12 hours", "1 day", "3 days", "1 week", "2 weeks"),
-        selectedPresetIndex = 3,
-        startLabel = "Now (Mon 18 Aug, 06:00)",
-        endLabel = "Thu 21 Aug, 06:00",
+        title = "Set start",
+        month = CalendarMonth(2026, 6),
+        selectedDay = 17,
+        hour = 6,
+        minute = 0,
+        isPm = true,
     )
 
     val invite = InviteUiState(
-        link = "https://commworkout.app/i/9F3KQ2",
-        code = "9F3KQ2",
+        link = "commworkout.app/i/anurag",
+        buddies = listOf(
+            BuddyUi("b1", "Rohit Kumar", AvatarUi("RK", color = avatarColorFor("RK")),
+                subtitle = "In 1 challenge", inChallenge = true),
+            BuddyUi("b2", "Priya Mehta", AvatarUi("PM", color = avatarColorFor("PM")),
+                subtitle = "In 1 challenge", inChallenge = true),
+            BuddyUi("b3", "Sahil Verma", AvatarUi("SV", color = avatarColorFor("SV")),
+                subtitle = "No challenge yet"),
+            BuddyUi("b4", "Neha Arora", AvatarUi("NA", color = avatarColorFor("NA")),
+                subtitle = "No challenge yet"),
+        ),
     )
 
     val challengeInvite = ChallengeInviteUiState(
-        headline = "Rahul K. invited you",
-        members = people.take(3),
-        remaining = "2d 14h left",
-        startsAt = "Mon 18 Aug, 06:00",
-        endsAt = "Wed 20 Aug, 06:00",
+        headline = "Rohit invited you to a group pushup challenge",
+        members = people,
+        windowLabel = "17 Jun 6PM → 18 Jun 6AM",
     )
 
     val record = RecordUiState(
-        reps = 17,
+        reps = 12,
         formLabel = "Good form",
         elapsedLabel = "04:12",
+        challengeLabel = "PUSHUP CHALLENGE · 1st of 4",
+        totalsLabel = "128 total · +12 this session",
         isRunning = true,
         hasCameraPermission = true,
     )
 
     val winner = WinnerUiState(
-        winnerName = "Rahul K.",
-        detail = "204 reps over 3 days",
-        leaderboard = leaderboard,
+        winnerName = "Anurag wins!",
+        detail = "203 pushups · most reps",
+        leaderboard = listOf(
+            ParticipantUi("u4", "Anurag (you)", me, rank = 1, reps = "203",
+                subtitle = "Finished 17 Jun · 8:40pm", isMe = true),
+            ParticipantUi("u1", "Rohit Kumar", people[0], rank = 2, reps = "181",
+                subtitle = "7 sessions"),
+            ParticipantUi("u2", "Priya Mehta", people[1], rank = 3, reps = "150",
+                subtitle = "5 sessions"),
+            ParticipantUi("u3", "Sahil Verma", people[2], rank = 4, reps = "96",
+                subtitle = "3 sessions"),
+        ),
+        bestSession = "54 pushups",
+        sessionsLogged = "6",
+        avgFormScore = "92%",
     )
 }

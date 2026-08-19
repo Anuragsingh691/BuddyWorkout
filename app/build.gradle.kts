@@ -43,6 +43,14 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        unitTests {
+            // The stubbed android.jar throws from every method by default, so a
+            // plain android.util.Log call fails a JVM test that never meant to
+            // exercise logging. Returning defaults lets production code log.
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {
@@ -63,7 +71,6 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
-    implementation(libs.firebase.storage)
     implementation(libs.firebase.functions)
     implementation(libs.kotlinx.coroutines.play.services)
 

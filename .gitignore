@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Stray Firebase config downloaded to the project root; the real one is app/google-services.json
+/google-services.json

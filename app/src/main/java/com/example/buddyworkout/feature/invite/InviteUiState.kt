@@ -1,11 +1,13 @@
 package com.example.buddyworkout.feature.invite
 
+import com.example.buddyworkout.core.ui.model.BuddyUi
+
 data class InviteUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
-    /** The full shareable URL, e.g. `"https://commworkout.app/i/9F3KQ2"`. */
+    /** Display-ready invite link, e.g. `"commworkout.app/i/anurag"`. */
     val link: String = "",
-    /** Just the code, shown large so it can be read aloud. */
-    val code: String = "",
     val copied: Boolean = false,
+    /** Everyone who has already accepted an invite from this user. */
+    val buddies: List<BuddyUi> = emptyList(),
 )

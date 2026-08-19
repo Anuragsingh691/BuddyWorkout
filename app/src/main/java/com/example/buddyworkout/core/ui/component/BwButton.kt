@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.buddyworkout.core.ui.icon.BwIcons
 import com.example.buddyworkout.core.ui.theme.BuddyWorkoutTheme
 import com.example.buddyworkout.core.ui.theme.BwColors
@@ -42,8 +43,12 @@ fun BwButton(
     modifier: Modifier = Modifier,
     variant: BwButtonVariant = BwButtonVariant.Primary,
     icon: ImageVector? = null,
+    /** Required when [text] is blank, since the icon is then the only label. */
+    contentDescription: String? = null,
     enabled: Boolean = true,
     height: Dp = if (variant == BwButtonVariant.DangerGhost) BwSize.ButtonSmall else BwSize.Button,
+    /** The 34dp inline chip the mockups use for "Challenge" and the like. */
+    compact: Boolean = false,
 ) {
     val background = when {
         !enabled -> if (variant == BwButtonVariant.Primary) BwColors.Line else Color.Transparent
@@ -77,24 +82,31 @@ fun BwButton(
             )
             .background(background, shape)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = if (compact) 14.dp else 16.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = contentDescription,
                 tint = if (icon == BwIcons.Google) Color.Unspecified else content,
                 modifier = Modifier.size(20.dp),
             )
         }
-        Text(
-            text = text,
-            color = content,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = weight),
-            modifier = if (icon != null) Modifier.padding(start = 10.dp) else Modifier,
-        )
+        // Blank text means an icon-only control, such as the camera flip on the
+        // record screen; drawing the empty label would push the icon off centre.
+        if (text.isNotEmpty()) {
+            Text(
+                text = text,
+                color = content,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = weight,
+                    fontSize = if (compact) 13.sp else 16.sp,
+                ),
+                modifier = if (icon != null) Modifier.padding(start = 10.dp) else Modifier,
+            )
+        }
     }
 }
 

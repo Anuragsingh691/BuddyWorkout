@@ -1,8 +1,10 @@
 package com.example.buddyworkout.core.ui.component
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -12,7 +14,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -34,6 +39,8 @@ data class AvatarUi(
     val initials: String,
     val key: String = initials,
     val color: Color? = null,
+    /** Drawn instead of the initials when present. */
+    val photo: ImageBitmap? = null,
 )
 
 @Composable
@@ -47,9 +54,20 @@ fun Avatar(
         modifier = modifier
             .size(size)
             .then(if (ring) Modifier.border(BwSize.AvatarRing, BwColors.Surface, CircleShape) else Modifier)
-            .background(avatar.color ?: avatarColorFor(avatar.key), CircleShape),
+            .clip(CircleShape)
+            .background(avatar.color ?: avatarColorFor(avatar.key)),
         contentAlignment = Alignment.Center,
     ) {
+        val photo = avatar.photo
+        if (photo != null) {
+            Image(
+                bitmap = photo,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            return@Box
+        }
         Text(
             text = avatar.initials,
             color = Color.White,
@@ -69,6 +87,7 @@ fun AvatarStack(
     modifier: Modifier = Modifier,
     size: Dp = 30.dp,
     max: Int = 4,
+    overlap: Dp = BwSize.AvatarOverlap,
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         avatars.take(max).forEachIndexed { index, avatar ->
@@ -76,7 +95,7 @@ fun AvatarStack(
                 avatar = avatar,
                 size = size,
                 ring = true,
-                modifier = Modifier.offset(x = -(BwSize.AvatarOverlap * index)),
+                modifier = Modifier.offset(x = -(overlap * index)),
             )
         }
     }

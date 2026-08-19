@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -20,23 +21,27 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
-import com.example.buddyworkout.BuildConfig
+import com.example.buddyworkout.core.common.CalendarMonth
 import com.example.buddyworkout.core.ui.component.BwBottomNav
 import com.example.buddyworkout.core.ui.gallery.ComponentGallery
 import com.example.buddyworkout.core.ui.preview.PreviewData
 import com.example.buddyworkout.core.ui.theme.BwColors
-import com.example.buddyworkout.feature.auth.LoginScreen
-import com.example.buddyworkout.feature.auth.RegisterScreen
-import com.example.buddyworkout.feature.challenge.ChallengeDetailScreen
-import com.example.buddyworkout.feature.challenge.ChallengesScreen
+import com.example.buddyworkout.feature.auth.LoginRoute
+import com.example.buddyworkout.feature.auth.RegisterRoute
+import com.example.buddyworkout.feature.challenge.ChallengeDetailRoute
+import com.example.buddyworkout.feature.challenge.ChallengesRoute
 import com.example.buddyworkout.feature.challenge.create.BuddyPickerScreen
-import com.example.buddyworkout.feature.challenge.create.CreateChallengeScreen
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavBackStackEntry
+import com.example.buddyworkout.feature.challenge.create.CreateChallengeRoute
+import com.example.buddyworkout.feature.challenge.create.CreateChallengeViewModel
 import com.example.buddyworkout.feature.challenge.create.MAX_BUDDIES
+import com.example.buddyworkout.feature.challenge.create.DateTimeMode
 import com.example.buddyworkout.feature.challenge.create.DateTimePickerScreen
-import com.example.buddyworkout.feature.home.HomeScreen
-import com.example.buddyworkout.feature.invite.ChallengeInviteScreen
+import com.example.buddyworkout.feature.home.HomeRoute
+import com.example.buddyworkout.feature.invite.ChallengeInviteRoute
 import com.example.buddyworkout.feature.invite.InviteScreen
-import com.example.buddyworkout.feature.profile.ProfileScreen
+import com.example.buddyworkout.feature.profile.ProfileRoute
 import com.example.buddyworkout.feature.record.RecordScreen
 import com.example.buddyworkout.feature.result.WinnerScreen
 import kotlinx.coroutines.flow.Flow
@@ -67,6 +72,7 @@ fun BuddyWorkoutNavHost(
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val selectedTab = bottomBarTabFor(backStackEntry?.destination?.route)
+    val motion = rememberNavMotion(navController)
 
     Scaffold(
         modifier = modifier,
@@ -90,107 +96,96 @@ fun BuddyWorkoutNavHost(
             navController = navController,
             startDestination = startDestination,
             modifier = Modifier.padding(padding),
+            enterTransition = NavTransitions.enter,
+            exitTransition = NavTransitions.exit,
+            popEnterTransition = NavTransitions.popEnter,
+            popExitTransition = NavTransitions.popExit,
         ) {
             // --- Auth ---------------------------------------------------
-            composable<Login> {
-                LoginScreen(
-                    state = PreviewData.login,
-                    onEmailChange = {},
-                    onPasswordChange = {},
-                    onSignIn = { navController.navigate(Home) { popUpTo(0) } },
-                    onGoogleSignIn = { navController.navigate(Home) { popUpTo(0) } },
+            scrimmed<Login>(motion) {
+                LoginRoute(
+                    onSignedIn = { navController.navigate(Home) { popUpTo(0) } },
                     onRegisterClick = { navController.navigate(Register) },
                 )
             }
-            composable<Register> {
-                RegisterScreen(
-                    state = PreviewData.register,
-                    onNameChange = {},
-                    onEmailChange = {},
-                    onPasswordChange = {},
-                    onCreateAccount = { navController.navigate(Home) { popUpTo(0) } },
-                    onSignInClick = { navController.popBackStack() },
+            scrimmed<Register>(motion) {
+                RegisterRoute(
+                    onRegistered = { navController.navigate(Home) { popUpTo(0) } },
                     onBack = { navController.popBackStack() },
                 )
             }
 
             // --- Bottom-nav roots ---------------------------------------
-            composable<Home> {
-                HomeScreen(
-                    state = PreviewData.home,
+            scrimmed<Home>(motion) {
+                HomeRoute(
                     onCreateChallenge = { navController.navigate(CreateGraph) },
                     onInviteBuddies = { navController.navigate(Invite) },
                     onChallengeClick = { id -> navController.navigate(ChallengeDetail(id)) },
                     onNotifications = {},
                 )
             }
-            composable<Challenges> {
-                // Temporary UI-local state so the tabs actually switch before a
-                // ViewModel exists. The ViewModel will own this.
-                var tab by rememberSaveable { mutableIntStateOf(0) }
-                ChallengesScreen(
-                    state = PreviewData.challengesTab.copy(selectedTab = tab),
-                    onTabSelect = { tab = it },
+            scrimmed<Challenges>(motion) {
+                ChallengesRoute(
                     onChallengeClick = { id -> navController.navigate(ChallengeDetail(id)) },
+                    onCreateChallenge = { navController.navigate(CreateGraph) },
                 )
             }
-            composable<Profile> {
-                ProfileScreen(
-                    state = PreviewData.profile.copy(showGallery = BuildConfig.DEBUG),
-                    onSignOut = { navController.navigate(Login) { popUpTo(0) } },
+            scrimmed<Profile>(motion) {
+                ProfileRoute(
+                    onSignedOut = { navController.navigate(Login) { popUpTo(0) } },
                     onOpenGallery = { navController.navigate(Gallery) },
                 )
             }
 
             // --- Challenge flow -----------------------------------------
-            composable<Invite> {
+            scrimmed<Invite>(motion) {
                 InviteScreen(
                     state = PreviewData.invite,
                     onCopyLink = {},
                     onShareLink = {},
+                    onChallengeBuddy = { navController.navigate(CreateGraph) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable<ChallengeDetail> { entry ->
+            scrimmed<ChallengeDetail>(motion) { entry ->
                 val route = entry.toRoute<ChallengeDetail>()
-                // The completed fake ("c0", reachable from the Completed tab)
-                // renders the ended variant, which is the only route to Winner.
-                val isCompleted = route.id == "c0"
-                ChallengeDetailScreen(
-                    state = PreviewData.challengeDetail.copy(
-                        isCompleted = isCompleted,
-                        remaining = if (isCompleted) "Ended" else PreviewData.challengeDetail.remaining,
-                    ),
+                val context = LocalContext.current
+                ChallengeDetailRoute(
+                    // Sharing needs a Context, so the intent is built here
+                    // rather than in the ViewModel — the same reason the photo
+                    // picker and the Google token request live at call sites.
+                    onShareLink = { context.shareChallenge(route.id) },
                     onBack = { navController.popBackStack() },
                     onRecordWorkout = { navController.navigate(Record(route.id)) },
                     onSeeWinner = { navController.navigate(Winner(route.id)) },
-                    onCancelChallenge = { navController.popBackStack() },
+                    onCancelled = { navController.popBackStack() },
                 )
             }
-            composable<ChallengeInvite>(
+            scrimmed<ChallengeInvite>(
+                motion = motion,
                 deepLinks = listOf(navDeepLink<ChallengeInvite>(basePath = INVITE_BASE_PATH)),
-            ) { entry ->
-                val route = entry.toRoute<ChallengeInvite>()
-                ChallengeInviteScreen(
-                    state = PreviewData.challengeInvite,
-                    onAccept = {
-                        navController.navigate(ChallengeDetail(route.code)) { popUpTo(0) }
+            ) {
+                ChallengeInviteRoute(
+                    onJoined = { id ->
+                        navController.navigate(ChallengeDetail(id)) { popUpTo(0) }
                     },
                     onDecline = { navController.navigate(Home) { popUpTo(0) } },
                 )
             }
-            composable<Record> {
+            scrimmed<Record>(motion) {
                 RecordScreen(
                     state = PreviewData.record,
                     onGrantCameraPermission = {},
+                    onFlipCamera = {},
                     onStopAndSave = { navController.popBackStack() },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable<Winner> {
+            scrimmed<Winner>(motion) {
                 WinnerScreen(
                     state = PreviewData.winner,
-                    onBackToHome = { navController.navigate(Home) { popUpTo(0) } },
+                    onRematch = { navController.navigate(CreateGraph) },
+                    onBack = { navController.navigate(Home) { popUpTo(0) } },
                 )
             }
 
@@ -198,20 +193,20 @@ fun BuddyWorkoutNavHost(
             // Scoped as its own graph so the three screens can later share one
             // CreateChallengeViewModel instead of passing results back.
             navigation<CreateGraph>(startDestination = Create) {
-                composable<Create> {
-                    CreateChallengeScreen(
-                        state = PreviewData.createChallenge,
-                        onBack = { navController.popBackStack() },
-                        onPickBuddies = { navController.navigate(BuddyPicker) },
-                        onPickWindow = { navController.navigate(DateTimePicker) },
-                        onCreate = {
-                            navController.navigate(ChallengeDetail("new")) {
+                scrimmed<Create>(motion) { entry ->
+                    CreateChallengeRoute(
+                        viewModel = createViewModel(navController, entry),
+                        onCreated = { id ->
+                            navController.navigate(ChallengeDetail(id)) {
                                 popUpTo(CreateGraph) { inclusive = true }
                             }
                         },
+                        onPickBuddies = { navController.navigate(BuddyPicker) },
+                        onPickWindow = { navController.navigate(DateTimePicker) },
+                        onBack = { navController.popBackStack() },
                     )
                 }
-                composable<BuddyPicker> {
+                scrimmed<BuddyPicker>(motion) {
                     // Temporary UI-local selection, replaced by the shared
                     // CreateChallengeViewModel once the create flow is wired.
                     var buddies by remember { mutableStateOf(PreviewData.buddies) }
@@ -234,11 +229,42 @@ fun BuddyWorkoutNavHost(
                         onBack = { navController.popBackStack() },
                     )
                 }
-                composable<DateTimePicker> {
-                    var preset by rememberSaveable { mutableIntStateOf(3) }
+                scrimmed<DateTimePicker>(motion) {
+                    // Temporary UI-local sheet state, likewise replaced by the
+                    // shared CreateChallengeViewModel. The month is held as two
+                    // ints so it survives process death without a custom Saver.
+                    var mode by rememberSaveable { mutableStateOf(DateTimeMode.Date) }
+                    var year by rememberSaveable { mutableIntStateOf(2026) }
+                    var month by rememberSaveable { mutableIntStateOf(6) }
+                    var day by rememberSaveable { mutableStateOf<Int?>(17) }
+                    var hour by rememberSaveable { mutableIntStateOf(6) }
+                    var minute by rememberSaveable { mutableIntStateOf(0) }
+                    var isPm by rememberSaveable { mutableStateOf(true) }
+
+                    val current = CalendarMonth(year, month)
                     DateTimePickerScreen(
-                        state = PreviewData.dateTimePicker.copy(selectedPresetIndex = preset),
-                        onSelectPreset = { preset = it },
+                        state = PreviewData.dateTimePicker.copy(
+                            mode = mode,
+                            month = current,
+                            selectedDay = day,
+                            hour = hour,
+                            minute = minute,
+                            isPm = isPm,
+                        ),
+                        onSelectMode = { mode = it },
+                        onSelectDay = { day = it },
+                        onPreviousMonth = {
+                            current.previous().let { year = it.year; month = it.month }
+                            // The day may not exist in the month stepped into.
+                            day = null
+                        },
+                        onNextMonth = {
+                            current.next().let { year = it.year; month = it.month }
+                            day = null
+                        },
+                        onSelectHour = { hour = it },
+                        onSelectMinute = { minute = it },
+                        onToggleMeridiem = { isPm = !isPm },
                         onSave = { navController.popBackStack() },
                         onBack = { navController.popBackStack() },
                     )
@@ -246,7 +272,38 @@ fun BuddyWorkoutNavHost(
             }
 
             // --- Development only ---------------------------------------
-            composable<Gallery> { ComponentGallery() }
+            scrimmed<Gallery>(motion) { ComponentGallery() }
         }
     }
+}
+
+/**
+ * The create flow's shared ViewModel, scoped to the graph rather than to a
+ * screen, so the three screens of the flow see the same state — which is why
+ * `CreateGraph` is a nested graph at all (spec §2.5).
+ */
+@Composable
+private fun createViewModel(
+    navController: NavHostController,
+    entry: NavBackStackEntry,
+): CreateChallengeViewModel {
+    val graphEntry = remember(entry) { navController.getBackStackEntry(CreateGraph) }
+    return hiltViewModel(graphEntry)
+}
+
+/**
+ * Opens the system share sheet with a link to [challengeId].
+ *
+ * The link is the challenge's own id: there is no separate invite code, and the
+ * id is unguessable, which is what the `get` rule relies on.
+ */
+private fun android.content.Context.shareChallenge(challengeId: String) {
+    val share = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(
+            Intent.EXTRA_TEXT,
+            "Join my pushup challenge: $INVITE_BASE_PATH/$challengeId",
+        )
+    }
+    startActivity(Intent.createChooser(share, null))
 }
